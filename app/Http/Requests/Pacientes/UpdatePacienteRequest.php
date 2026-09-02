@@ -17,14 +17,6 @@ class UpdatePacienteRequest extends FormRequest
         $paciente = $this->route('paciente');
 
         return [
-            'codigo' => [
-                'required',
-                'string',
-                'max:30',
-                Rule::unique('pacientes', 'codigo')
-                    ->ignore($paciente?->id),
-            ],
-
             'tipo_documento' => [
                 'required',
                 'string',

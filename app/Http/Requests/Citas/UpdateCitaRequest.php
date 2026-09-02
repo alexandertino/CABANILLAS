@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Citas;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateCitaRequest extends FormRequest
 {
@@ -11,26 +12,66 @@ class UpdateCitaRequest extends FormRequest
         return true;
     }
 
+
     public function rules(): array
     {
         return [
+
             'paciente_id' => [
                 'required',
                 'integer',
-                'exists:pacientes,id',
+
+                Rule::exists(
+                    'pacientes',
+                    'id'
+                )->where(
+                    'activo',
+                    true
+                ),
             ],
+
 
             'profesional_id' => [
                 'required',
                 'integer',
-                'exists:profesionales,id',
+
+                Rule::exists(
+                    'profesionales',
+                    'id'
+                )->where(
+                    'activo',
+                    true
+                ),
             ],
+
 
             'consultorio_id' => [
                 'nullable',
                 'integer',
-                'exists:consultorios,id',
+
+                Rule::exists(
+                    'consultorios',
+                    'id'
+                )->where(
+                    'activo',
+                    true
+                ),
             ],
+
+
+            'servicio_id' => [
+                'required',
+                'integer',
+
+                Rule::exists(
+                    'servicios',
+                    'id'
+                )->where(
+                    'activo',
+                    true
+                ),
+            ],
+
 
             'estado_cita_id' => [
                 'required',
@@ -38,16 +79,18 @@ class UpdateCitaRequest extends FormRequest
                 'exists:estados_cita,id',
             ],
 
+
             'fecha_hora_inicio' => [
                 'required',
                 'date',
             ],
 
+
             'fecha_hora_fin' => [
-                'required',
+                'nullable',
                 'date',
-                'after:fecha_hora_inicio',
             ],
+
 
             'motivo' => [
                 'nullable',
@@ -55,20 +98,30 @@ class UpdateCitaRequest extends FormRequest
                 'max:255',
             ],
 
+
             'observaciones' => [
                 'nullable',
                 'string',
             ],
+        ];
+    }
 
-            'fecha_cancelacion' => [
-                'nullable',
-                'date',
-            ],
 
-            'motivo_cancelacion' => [
-                'nullable',
-                'string',
-            ],
+    public function messages(): array
+    {
+        return [
+
+            'paciente_id.required' =>
+                'Selecciona un paciente.',
+
+            'profesional_id.required' =>
+                'Selecciona un profesional.',
+
+            'servicio_id.required' =>
+                'Selecciona un servicio.',
+
+            'fecha_hora_inicio.required' =>
+                'Selecciona la fecha y hora de la cita.',
         ];
     }
 }

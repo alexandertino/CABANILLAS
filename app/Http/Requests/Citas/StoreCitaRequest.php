@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Citas;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreCitaRequest extends FormRequest
 {
@@ -11,43 +12,89 @@ class StoreCitaRequest extends FormRequest
         return true;
     }
 
+
     public function rules(): array
     {
         return [
+
             'paciente_id' => [
                 'required',
                 'integer',
-                'exists:pacientes,id',
+
+                Rule::exists(
+                    'pacientes',
+                    'id'
+                )->where(
+                    'activo',
+                    true
+                ),
             ],
+
 
             'profesional_id' => [
                 'required',
                 'integer',
-                'exists:profesionales,id',
+
+                Rule::exists(
+                    'profesionales',
+                    'id'
+                )->where(
+                    'activo',
+                    true
+                ),
             ],
+
 
             'consultorio_id' => [
                 'nullable',
                 'integer',
-                'exists:consultorios,id',
+
+                Rule::exists(
+                    'consultorios',
+                    'id'
+                )->where(
+                    'activo',
+                    true
+                ),
             ],
 
-            'estado_cita_id' => [
+
+            'servicio_id' => [
                 'required',
+                'integer',
+
+                Rule::exists(
+                    'servicios',
+                    'id'
+                )->where(
+                    'activo',
+                    true
+                ),
+            ],
+
+
+            'estado_cita_id' => [
+                'nullable',
                 'integer',
                 'exists:estados_cita,id',
             ],
+
 
             'fecha_hora_inicio' => [
                 'required',
                 'date',
             ],
 
+
+            /*
+             * Vue la calcula para mostrarla,
+             * pero Laravel vuelve a calcularla.
+             */
             'fecha_hora_fin' => [
-                'required',
+                'nullable',
                 'date',
-                'after:fecha_hora_inicio',
             ],
+
 
             'motivo' => [
                 'nullable',
@@ -55,46 +102,49 @@ class StoreCitaRequest extends FormRequest
                 'max:255',
             ],
 
+
             'observaciones' => [
-                'nullable',
-                'string',
-            ],
-
-            'fecha_cancelacion' => [
-                'nullable',
-                'date',
-            ],
-
-            'motivo_cancelacion' => [
                 'nullable',
                 'string',
             ],
         ];
     }
 
+
     public function messages(): array
     {
         return [
-            'paciente_id.required' => 'Debe seleccionar un paciente.',
-            'paciente_id.exists' => 'El paciente seleccionado no existe.',
+
+            'paciente_id.required' =>
+                'Selecciona un paciente.',
+
+            'paciente_id.exists' =>
+                'El paciente seleccionado no está disponible.',
+
 
             'profesional_id.required' =>
-                'Debe seleccionar un profesional.',
+                'Selecciona un profesional.',
 
             'profesional_id.exists' =>
-                'El profesional seleccionado no existe.',
+                'El profesional seleccionado no está disponible.',
 
-            'estado_cita_id.required' =>
-                'Debe seleccionar un estado para la cita.',
+
+            'servicio_id.required' =>
+                'Selecciona un servicio.',
+
+            'servicio_id.exists' =>
+                'El servicio seleccionado no está disponible.',
+
+
+            'consultorio_id.exists' =>
+                'El consultorio seleccionado no está disponible.',
+
 
             'fecha_hora_inicio.required' =>
-                'Debe indicar la fecha y hora de inicio.',
+                'Selecciona la fecha y hora de la cita.',
 
-            'fecha_hora_fin.required' =>
-                'Debe indicar la fecha y hora de finalización.',
-
-            'fecha_hora_fin.after' =>
-                'La hora de finalización debe ser posterior a la hora de inicio.',
+            'fecha_hora_inicio.date' =>
+                'La fecha de inicio no es válida.',
         ];
     }
 }

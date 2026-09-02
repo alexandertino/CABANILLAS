@@ -2,6 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::view('/', 'welcome')
+    ->name('inicio');
+
+/*
+|--------------------------------------------------------------------------
+| Rutas del sistema Clínica Cabanillas
+|--------------------------------------------------------------------------
+*/
+
+require __DIR__.'/clinica.php';

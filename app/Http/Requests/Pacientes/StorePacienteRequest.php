@@ -14,13 +14,6 @@ class StorePacienteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'codigo' => [
-                'required',
-                'string',
-                'max:30',
-                'unique:pacientes,codigo',
-            ],
-
             'tipo_documento' => [
                 'required',
                 'string',

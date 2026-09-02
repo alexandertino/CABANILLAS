@@ -5,6 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Paciente;
+use App\Models\Profesional;
+use App\Models\Consultorio;
+use App\Models\EstadoCita;
+use App\Models\ServicioCita;
 
 class Cita extends Model
 {
@@ -17,6 +22,7 @@ class Cita extends Model
         'estado_cita_id',
         'fecha_hora_inicio',
         'fecha_hora_fin',
+        'fecha_hora_fin_real',
         'motivo',
         'observaciones',
         'fecha_cancelacion',
@@ -27,9 +33,18 @@ class Cita extends Model
     protected function casts(): array
     {
         return [
-            'fecha_hora_inicio' => 'datetime',
-            'fecha_hora_fin' => 'datetime',
-            'fecha_cancelacion' => 'datetime',
+
+            'fecha_hora_inicio' =>
+                'datetime',
+
+            'fecha_hora_fin' =>
+                'datetime',
+
+            'fecha_hora_fin_real' =>
+                'datetime',
+
+            'fecha_cancelacion' =>
+                'datetime',
         ];
     }
 
