@@ -34,7 +34,10 @@ class AgendaController extends Controller
             ], 422);
         }
 
-        $patient = Paciente::query()->where('numero_documento', $document)->first();
+        $patient = Paciente::query()
+            ->where('numero_documento', $document)
+            ->where('activo', true)
+            ->first();
 
         if (! $patient) {
             return response()->json(['message' => 'Paciente no encontrado.'], 404);
@@ -272,9 +275,13 @@ class AgendaController extends Controller
 
     public function rescheduleAppointment(RescheduleApiCitaRequest $request, Cita $cita): JsonResponse
     {
-        $cancelled = EstadoCita::query()->where('codigo', 'CANCELADA')->value('id');
+        $cancelled = EstadoCita::query()->where('codigo', 'CANCELADA')->first();
 
-        if ($cita->estado_cita_id === $cancelled) {
+        if (! $cancelled) {
+            return response()->json(['message' => 'No está configurado el estado CANCELADA.'], 500);
+        }
+
+        if ($cita->estado_cita_id === $cancelled->id) {
             return response()->json(['message' => 'Una cita cancelada no puede reprogramarse.'], 422);
         }
 
