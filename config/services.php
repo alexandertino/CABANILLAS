@@ -2,6 +2,10 @@
 
 return [
 
+    'clinic_api' => [
+        'key' => env('CLINIC_API_KEY'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
