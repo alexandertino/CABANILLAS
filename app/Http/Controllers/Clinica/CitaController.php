@@ -261,7 +261,7 @@ class CitaController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    private function estadoBloqueaHorario(
+    public function estadoBloqueaHorario(
         int $estadoId
     ): bool {
 
@@ -431,7 +431,7 @@ class CitaController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    private function validarDisponibilidad(
+    public function validarDisponibilidad(
         array $datos,
         ?Cita $citaActual = null
     ): void {
@@ -509,7 +509,7 @@ class CitaController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    private function obtenerServicio(
+    public function obtenerServicio(
         int $servicioId
     ): Servicio {
 
@@ -536,7 +536,7 @@ class CitaController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    private function guardarServicioCita(
+    public function guardarServicioCita(
         Cita $cita,
         Servicio $servicio
     ): void {
