@@ -3,7 +3,10 @@
 return [
 
     'clinic_api' => [
+        'driver' => env('CLINIC_API_DRIVER', 'api'),
+        'url' => env('CLINIC_API_URL', 'http://localhost:8000'),
         'key' => env('CLINIC_API_KEY'),
+        'timeout' => env('CLINIC_API_TIMEOUT', 10),
     ],
 
     /*

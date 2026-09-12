@@ -211,6 +211,19 @@ class AgendaController extends Controller
         return response()->json(['data' => $this->appointmentData($cita)]);
     }
 
+    public function patientAppointments(Paciente $paciente): JsonResponse
+    {
+        $appointments = $paciente->citas()
+            ->with(['paciente', 'profesional', 'estadoCita', 'consultorio', 'serviciosCita.servicio'])
+            ->orderBy('fecha_hora_inicio')
+            ->orderBy('id')
+            ->get();
+
+        return response()->json([
+            'data' => $appointments->map(fn (Cita $appointment) => $this->appointmentData($appointment))->values(),
+        ]);
+    }
+
     public function confirmAppointment(Cita $cita): JsonResponse
     {
         $confirmed = EstadoCita::query()->where('codigo', 'CONFIRMADA')->first();

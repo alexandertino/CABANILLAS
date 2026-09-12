@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('clinic.api')->group(function () {
     Route::get('pacientes', [AgendaController::class, 'patient']);
     Route::post('pacientes', [AgendaController::class, 'createPatient']);
+    Route::get('pacientes/{paciente}/citas', [AgendaController::class, 'patientAppointments']);
     Route::get('servicios', [AgendaController::class, 'services']);
     Route::get('profesionales', [AgendaController::class, 'professionals']);
     Route::get('disponibilidad', [AgendaController::class, 'availability']);
