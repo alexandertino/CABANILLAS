@@ -1,4 +1,23 @@
 <script setup>
+import { computed } from 'vue';
+
+import { usePage } from '@inertiajs/vue3';
+
+const page = usePage();
+
+const iniciales = computed(() => {
+    const partes = page.props.auth?.user?.name
+        ?.trim()
+        .split(/\s+/)
+        .filter(Boolean) ?? [];
+
+    return partes
+        .slice(0, 2)
+        .map((parte) => parte[0])
+        .join('')
+        .toUpperCase() || 'CC';
+});
+
 import {
     Menu,
     Search,
@@ -208,7 +227,7 @@ const emit = defineEmits([
                         text-clinica-800
                     "
                 >
-                    AD
+                    {{ iniciales }}
                 </div>
 
                 <ChevronDown

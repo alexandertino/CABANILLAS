@@ -9,23 +9,34 @@ class MetodoPago extends Model
 {
     protected $table = 'metodos_pago';
 
+
     public $timestamps = false;
 
+
     protected $fillable = [
+
         'codigo',
+
         'nombre',
+
         'activo',
+
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'activo' => 'boolean',
-        ];
-    }
+
+    protected $casts = [
+
+        'activo' =>
+            'boolean',
+
+    ];
+
 
     public function pagos(): HasMany
     {
-        return $this->hasMany(Pago::class);
+        return $this->hasMany(
+            Pago::class,
+            'metodo_pago_id'
+        );
     }
 }

@@ -42,4 +42,13 @@ class Paciente extends Model
     {
         return $this->hasMany(Pago::class);
     }
+
+    public function tratamientos(): HasMany
+    {
+        return $this->hasMany(
+            TratamientoPaciente::class,
+            'paciente_id'
+        );
+    }
+
 }

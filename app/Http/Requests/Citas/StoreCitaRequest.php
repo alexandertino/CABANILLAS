@@ -107,6 +107,38 @@ class StoreCitaRequest extends FormRequest
                 'nullable',
                 'string',
             ],
+            'tipo_atencion' => [
+                'required',
+                Rule::in([
+                    'NUEVO_TRATAMIENTO',
+                    'CONTINUAR_TRATAMIENTO',
+                ]),
+            ],
+
+            'tratamiento_paciente_id' => [
+                'nullable',
+                'integer',
+                'exists:tratamientos_pacientes,id',
+                Rule::requiredIf(
+                    fn () =>
+                        $this->input('tipo_atencion')
+                        ===
+                        'CONTINUAR_TRATAMIENTO'
+                ),
+            ],
+
+            'precio_acordado' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:99999999.99',
+                Rule::requiredIf(
+                    fn () =>
+                        $this->input('tipo_atencion')
+                        ===
+                        'NUEVO_TRATAMIENTO'
+                ),
+            ],
         ];
     }
 
@@ -145,6 +177,27 @@ class StoreCitaRequest extends FormRequest
 
             'fecha_hora_inicio.date' =>
                 'La fecha de inicio no es válida.',
+
+            'tipo_atencion.required' =>
+                'Selecciona si se trata de un tratamiento nuevo o una continuación.',
+
+            'tipo_atencion.in' =>
+                'El tipo de atención seleccionado no es válido.',
+
+            'tratamiento_paciente_id.required' =>
+                'Selecciona el tratamiento que continuará.',
+
+            'tratamiento_paciente_id.exists' =>
+                'El tratamiento seleccionado no existe.',
+
+            'precio_acordado.required' =>
+                'Ingresa el precio acordado del tratamiento.',
+
+            'precio_acordado.numeric' =>
+                'El precio acordado debe ser un número válido.',
+
+            'precio_acordado.min' =>
+                'El precio acordado no puede ser negativo.',
         ];
     }
 }

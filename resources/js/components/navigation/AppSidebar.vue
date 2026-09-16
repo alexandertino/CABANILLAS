@@ -1,12 +1,47 @@
 <script setup>
-import { usePage } from '@inertiajs/vue3';
+import {
+    computed,
+    ref,
+} from 'vue';
+
+import {
+    router,
+    usePage,
+} from '@inertiajs/vue3';
 
 const page = usePage();
+const cerrandoSesion = ref(false);
+
+const usuario = computed(() =>
+    page.props.auth?.user ?? null
+);
+
+const permisos = computed(() => new Set(
+    page.props.auth?.permissions ?? []
+));
+
+const roles = computed(() => new Set(
+    page.props.auth?.roles ?? []
+));
+
+const iniciales = computed(() => {
+    const partes = usuario.value?.name
+        ?.trim()
+        .split(/\s+/)
+        .filter(Boolean) ?? [];
+
+    return partes
+        .slice(0, 2)
+        .map((parte) => parte[0])
+        .join('')
+        .toUpperCase() || 'CC';
+});
 
 
 import {
     LayoutDashboard,
     Users,
+    UserCog,
     CalendarDays,
     Stethoscope,
     DoorOpen,
@@ -14,6 +49,7 @@ import {
     CreditCard,
     Settings,
     X,
+    LogOut,
     Smile,
 } from 'lucide-vue-next';
 
@@ -34,24 +70,28 @@ const principal = [
         href: '/clinica',
         icono: LayoutDashboard,
         disponible: true,
+        permiso: 'dashboard.ver',
     },
     {
         nombre: 'Pacientes',
         href: '/clinica/pacientes',
         icono: Users,
         disponible: true,
+        permiso: 'pacientes.ver',
     },
     {
         nombre: 'Citas',
         href: '/clinica/citas',
         icono: CalendarDays,
         disponible: true,
+        permiso: 'citas.ver',
     },
     {
         nombre: 'Profesionales',
         href: '/clinica/profesionales',
         icono: Stethoscope,
         disponible: true,
+        permiso: 'profesionales.ver',
     },
 ];
 
@@ -61,26 +101,54 @@ const administracion = [
         href: '/clinica/consultorios',
         icono: DoorOpen,
         disponible: true,
+        permiso: 'consultorios.ver',
     },
     {
         nombre: 'Servicios',
         href: '/clinica/servicios',
         icono: HeartPulse,
         disponible: true,
+        permiso: 'servicios.ver',
     },
     {
         nombre: 'Pagos',
         href: '/clinica/pagos',
         icono: CreditCard,
-        disponible: false,
+        disponible: true,
+        permiso: 'pagos.ver',
+    },
+    {
+        nombre: 'Usuarios',
+        href: '/clinica/usuarios',
+        icono: UserCog,
+        disponible: true,
+        permiso: 'usuarios.ver',
     },
     {
         nombre: 'Configuración',
         href: '/clinica/configuracion',
         icono: Settings,
         disponible: false,
+        rol: 'ADMINISTRADOR',
     },
 ];
+
+function puedeVer(item) {
+    if (item.rol) {
+        return roles.value.has(item.rol);
+    }
+
+    return !item.permiso
+        || permisos.value.has(item.permiso);
+}
+
+const principalVisible = computed(() =>
+    principal.filter(puedeVer)
+);
+
+const administracionVisible = computed(() =>
+    administracion.filter(puedeVer)
+);
 
 function activo(href) {
 
@@ -92,6 +160,20 @@ function activo(href) {
     }
 
     return rutaActual.startsWith(href);
+}
+
+function cerrarSesion() {
+    if (cerrandoSesion.value) {
+        return;
+    }
+
+    cerrandoSesion.value = true;
+
+    router.post('/logout', {}, {
+        onFinish: () => {
+            cerrandoSesion.value = false;
+        },
+    });
 }
 </script>
 
@@ -191,7 +273,7 @@ function activo(href) {
             <div class="space-y-1">
 
                 <template
-                    v-for="item in principal"
+                    v-for="item in principalVisible"
                     :key="item.nombre"
                 >
 
@@ -270,6 +352,7 @@ function activo(href) {
 
 
             <p
+                v-if="administracionVisible.length"
                 class="
                     mb-2
                     mt-8
@@ -284,10 +367,13 @@ function activo(href) {
                 Administración
             </p>
 
-            <div class="space-y-1">
+            <div
+                v-if="administracionVisible.length"
+                class="space-y-1"
+            >
 
                 <template
-                    v-for="item in administracion"
+                    v-for="item in administracionVisible"
                     :key="item.nombre"
                 >
 
@@ -405,7 +491,7 @@ function activo(href) {
                         text-white
                     "
                 >
-                    AD
+                    {{ iniciales }}
                 </div>
 
                 <div class="min-w-0">
@@ -418,7 +504,7 @@ function activo(href) {
                             text-slate-800
                         "
                     >
-                        Administrador
+                        {{ usuario?.name }}
                     </p>
 
                     <p
@@ -428,12 +514,49 @@ function activo(href) {
                             text-slate-500
                         "
                     >
-                        Clínica Cabanillas
+                        {{ usuario?.email }}
                     </p>
 
                 </div>
 
             </div>
+            <button
+                type="button"
+                :disabled="cerrandoSesion"
+                class="
+                    mt-3
+                    flex
+                    w-full
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    border
+                    border-slate-200
+                    bg-white
+                    px-3
+                    py-2
+                    text-xs
+                    font-semibold
+                    text-slate-600
+                    transition
+                    hover:border-rose-200
+                    hover:bg-rose-50
+                    hover:text-rose-700
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
+                "
+                @click="cerrarSesion"
+            >
+                <LogOut :size="15" />
+
+                {{
+                    cerrandoSesion
+                        ? 'Cerrando sesión...'
+                        : 'Cerrar sesión'
+                }}
+            </button>
+
         </div>
 
     </aside>

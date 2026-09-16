@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Pacientes\StorePacienteRequest;
 use App\Http\Requests\Pacientes\UpdatePacienteRequest;
 use App\Models\Paciente;
+use App\Support\Clinica\AlcanceClinico;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,7 +22,10 @@ class PacienteController extends Controller
         $buscar = request()->string('buscar')->trim()->toString();
         $estado = request()->string('estado', 'todos')->toString();
 
-        $pacientes = Paciente::query()
+        $pacientes = AlcanceClinico::pacientes(
+            Paciente::query(),
+            request()->user()
+        )
 
             ->when($buscar, function ($query, $buscar) {
                 $query->where(function ($query) use ($buscar) {
@@ -179,7 +183,10 @@ class PacienteController extends Controller
         }
 
 
-        $pacientes = Paciente::query()
+        $pacientes = AlcanceClinico::pacientes(
+            Paciente::query(),
+            $request->user()
+        )
 
             ->where(
                 'activo',

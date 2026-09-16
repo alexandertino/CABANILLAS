@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Profesional extends Model
 {
@@ -29,5 +30,10 @@ class Profesional extends Model
     public function citas(): HasMany
     {
         return $this->hasMany(Cita::class);
+    }
+
+    public function usuario(): HasOne
+    {
+        return $this->hasOne(User::class);
     }
 }

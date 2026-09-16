@@ -1,5 +1,10 @@
 <script setup>
+import AgendaDia
+    from '@/components/citas/AgendaDia.vue';
 
+import AgendaSemana
+    from '@/components/citas/AgendaSemana.vue';
+    
 import {
     computed,
     ref,
@@ -14,6 +19,7 @@ import {
 
 import {
     CalendarDays,
+    CalendarClock,
     Plus,
     Search,
     Clock3,
@@ -26,6 +32,8 @@ import {
     CalendarX,
     Pencil,
     LoaderCircle,
+    Eye,
+    EllipsisVertical,
 } from 'lucide-vue-next';
 
 import AppLayout
@@ -37,6 +45,15 @@ import CitaFormDrawer
 import CancelarCitaModal
     from '@/components/citas/CancelarCitaModal.vue';
 
+import ReprogramarCitaModal
+    from '@/components/citas/ReprogramarCitaModal.vue';
+
+import CitaDetalleDrawer
+    from '@/components/citas/CitaDetalleDrawer.vue';
+
+import FinalizarAtencionModal
+    from '@/components/citas/FinalizarAtencionModal.vue';
+
 
 /* =========================================================
    PROPS
@@ -47,11 +64,6 @@ const props = defineProps({
     citas: {
         type: Object,
         required: true,
-    },
-
-    pacientes: {
-        type: Array,
-        default: () => [],
     },
 
     profesionales: {
@@ -80,6 +92,8 @@ const props = defineProps({
 
 });
 
+const modoVista =
+    ref('lista');
 
 /* =========================================================
    FILTROS
@@ -105,7 +119,7 @@ let temporizador = null;
 
 
 /* =========================================================
-   DRAWER DE CITA
+   DRAWER CREAR / EDITAR
 ========================================================= */
 
 const drawerAbierto =
@@ -116,13 +130,46 @@ const citaSeleccionada =
 
 
 /* =========================================================
-   MODAL DE CANCELACIÓN
+   MODAL CANCELAR
 ========================================================= */
 
 const cancelarModalAbierto =
     ref(false);
 
 const citaCancelar =
+    ref(null);
+
+
+/* =========================================================
+   MODAL REPROGRAMAR
+========================================================= */
+
+const reprogramarModalAbierto =
+    ref(false);
+
+const citaReprogramar =
+    ref(null);
+
+
+/* =========================================================
+   DRAWER DETALLE
+========================================================= */
+
+const detalleAbierto =
+    ref(false);
+
+const citaDetalle =
+    ref(null);
+
+
+/* =========================================================
+   MODAL FINALIZAR ATENCIÓN
+========================================================= */
+
+const finalizarModalAbierto =
+    ref(false);
+
+const citaFinalizar =
     ref(null);
 
 
@@ -148,16 +195,27 @@ const hayCitas = computed(() => {
 
 
 /* =========================================================
-   WATCHERS DE FILTROS
+   WATCHERS
 ========================================================= */
 
 watch(
     buscar,
+
     () => {
 
         clearTimeout(
             temporizador
         );
+
+
+        if (
+            modoVista.value
+            !==
+            'lista'
+        ) {
+            return;
+        }
+
 
         temporizador =
             setTimeout(
@@ -168,19 +226,30 @@ watch(
     }
 );
 
-
 watch(
     [
         fecha,
         estado,
         profesional,
     ],
-    aplicarFiltros
+
+    () => {
+
+        if (
+            modoVista.value
+            ===
+            'lista'
+        ) {
+
+            aplicarFiltros();
+        }
+
+    }
 );
 
 
 /* =========================================================
-   FILTRAR CITAS
+   FILTROS
 ========================================================= */
 
 function aplicarFiltros() {
@@ -230,7 +299,7 @@ function nuevaCita() {
 
 
 /* =========================================================
-   EDITAR CITA
+   EDITAR
 ========================================================= */
 
 function editarCita(
@@ -245,10 +314,6 @@ function editarCita(
 }
 
 
-/* =========================================================
-   CERRAR DRAWER
-========================================================= */
-
 function cerrarDrawer() {
 
     drawerAbierto.value =
@@ -260,7 +325,7 @@ function cerrarDrawer() {
 
 
 /* =========================================================
-   ABRIR MODAL DE CANCELACIÓN
+   CANCELAR
 ========================================================= */
 
 function abrirCancelar(
@@ -275,10 +340,6 @@ function abrirCancelar(
 }
 
 
-/* =========================================================
-   CERRAR MODAL DE CANCELACIÓN
-========================================================= */
-
 function cerrarCancelar() {
 
     cancelarModalAbierto.value =
@@ -290,7 +351,59 @@ function cerrarCancelar() {
 
 
 /* =========================================================
-   OBTENER ESTADO POR CÓDIGO
+   REPROGRAMAR
+========================================================= */
+
+function abrirReprogramar(
+    cita
+) {
+
+    citaReprogramar.value =
+        cita;
+
+    reprogramarModalAbierto.value =
+        true;
+}
+
+
+function cerrarReprogramar() {
+
+    reprogramarModalAbierto.value =
+        false;
+
+    citaReprogramar.value =
+        null;
+}
+
+
+/* =========================================================
+   DETALLE
+========================================================= */
+
+function abrirDetalle(
+    cita
+) {
+
+    citaDetalle.value =
+        cita;
+
+    detalleAbierto.value =
+        true;
+}
+
+
+function cerrarDetalle() {
+
+    detalleAbierto.value =
+        false;
+
+    citaDetalle.value =
+        null;
+}
+
+
+/* =========================================================
+   ESTADOS
 ========================================================= */
 
 function obtenerEstado(
@@ -298,15 +411,11 @@ function obtenerEstado(
 ) {
 
     return props.estados.find(
-        estado =>
-            estado.codigo === codigo
+        item =>
+            item.codigo === codigo
     );
 }
 
-
-/* =========================================================
-   OBTENER CÓDIGO DE ESTADO DE UNA CITA
-========================================================= */
 
 function codigoEstado(
     cita
@@ -331,9 +440,7 @@ function cambiarEstado(
     motivo = null
 ) {
 
-    if (
-        !cita?.id
-    ) {
+    if (!cita?.id) {
 
         console.error(
             'La cita no tiene un ID válido.'
@@ -349,9 +456,7 @@ function cambiarEstado(
         );
 
 
-    if (
-        !nuevoEstado
-    ) {
+    if (!nuevoEstado) {
 
         console.error(
             `No existe el estado ${codigo}`
@@ -407,7 +512,7 @@ function cambiarEstado(
 
 
 /* =========================================================
-   CONFIRMAR CITA
+   CONFIRMAR
 ========================================================= */
 
 function confirmarCita(
@@ -442,29 +547,125 @@ function iniciarAtencion(
    FINALIZAR ATENCIÓN
 ========================================================= */
 
+function citaTieneTratamiento(
+    cita
+) {
+
+    return Boolean(
+        cita?.tratamiento_cita
+        ??
+        cita?.tratamientoCita
+    );
+}
+
+
+function cerrarFinalizarAtencion() {
+
+    finalizarModalAbierto.value =
+        false;
+
+    citaFinalizar.value =
+        null;
+}
+
+
 function finalizarAtencion(
     cita
 ) {
 
-    cambiarEstado(
-        cita,
-        'ATENDIDA',
-        'Atención finalizada'
+    if (
+        !cita?.id
+    ) {
+
+        console.error(
+            'La cita no tiene un ID válido.'
+        );
+
+        return;
+    }
+
+
+    /*
+     * Si la cita pertenece a un tratamiento,
+     * preguntamos qué ocurrirá con él.
+     */
+
+    if (
+        citaTieneTratamiento(
+            cita
+        )
+    ) {
+
+        citaFinalizar.value =
+            cita;
+
+        finalizarModalAbierto.value =
+            true;
+
+        return;
+    }
+
+
+    /*
+     * Una cita simple se finaliza directamente
+     * usando el endpoint especializado.
+     */
+
+    cambiandoEstado.value =
+        cita.id;
+
+
+    router.patch(
+        `/clinica/citas/${cita.id}/finalizar-atencion`,
+        {},
+
+        {
+            preserveScroll:
+                true,
+
+            onError: errores => {
+
+                console.error(
+                    'Error finalizando atención:',
+                    errores
+                );
+            },
+
+            onFinish: () => {
+
+                cambiandoEstado.value =
+                    null;
+            },
+        }
     );
 }
 
 
 /* =========================================================
-   CLASE VISUAL DEL ESTADO
+   NO ASISTIÓ
+========================================================= */
+
+function marcarNoAsistio(
+    cita
+) {
+
+    cambiarEstado(
+        cita,
+        'NO_ASISTIO',
+        'El paciente no asistió a la cita'
+    );
+}
+
+
+/* =========================================================
+   COLORES DE ESTADO
 ========================================================= */
 
 function claseEstado(
     codigo
 ) {
 
-    switch (
-        codigo
-    ) {
+    switch (codigo) {
 
         case 'PENDIENTE':
 
@@ -544,6 +745,7 @@ function hora(
         return '';
     }
 
+
     return new Intl.DateTimeFormat(
         'es-PE',
         {
@@ -557,6 +759,7 @@ function hora(
     );
 }
 
+
 /* =========================================================
    FORMATEAR FECHA
 ========================================================= */
@@ -569,6 +772,7 @@ function fechaBonita(
         return '';
     }
 
+
     return new Intl.DateTimeFormat(
         'es-PE',
         {
@@ -580,6 +784,18 @@ function fechaBonita(
     ).format(
         new Date(valor)
     );
+}
+
+function abrirDiaDesdeSemana(
+    fechaSeleccionada
+) {
+
+    fecha.value =
+        fechaSeleccionada;
+
+
+    modoVista.value =
+        'dia';
 }
 
 </script>
@@ -595,7 +811,9 @@ function fechaBonita(
         descripcion="Agenda y atención de pacientes"
     >
 
-        <!-- HEADER -->
+        <!-- =====================================================
+             HEADER
+        ====================================================== -->
 
         <section
             class="
@@ -608,7 +826,13 @@ function fechaBonita(
             "
         >
 
-            <div class="flex items-center gap-3">
+            <div
+                class="
+                    flex
+                    items-center
+                    gap-3
+                "
+            >
 
                 <div
                     class="
@@ -622,7 +846,9 @@ function fechaBonita(
                         text-clinica-700
                     "
                 >
-                    <CalendarDays :size="21" />
+                    <CalendarDays
+                        :size="21"
+                    />
                 </div>
 
 
@@ -637,6 +863,7 @@ function fechaBonita(
                     >
                         Agenda de citas
                     </h2>
+
 
                     <p
                         class="
@@ -654,34 +881,158 @@ function fechaBonita(
             </div>
 
 
+    <div
+        class="
+            flex
+            flex-wrap
+            items-center
+            gap-3
+        "
+    >
+
+        <!-- MODOS -->
+
+        <div
+            class="
+                inline-flex
+                rounded-xl
+                border
+                border-slate-200
+                bg-white
+                p-1
+            "
+        >
+
             <button
                 type="button"
                 class="
-                    inline-flex
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-xl
-                    bg-clinica-700
-                    px-4
-                    py-2.5
-                    text-sm
+                    rounded-lg
+                    px-3
+                    py-2
+                    text-xs
                     font-semibold
-                    text-white
+                    transition
                 "
-                @click="nuevaCita"
+                :class="
+                    modoVista === 'lista'
+                        ? [
+                            'bg-slate-900',
+                            'text-white',
+                        ]
+                        : [
+                            'text-slate-500',
+                            'hover:bg-slate-50',
+                        ]
+                "
+                @click="
+                    modoVista = 'lista'
+                "
             >
-                <Plus :size="18" />
-
-                Nueva cita
+                Lista
             </button>
+
+
+            <button
+                type="button"
+                class="
+                    rounded-lg
+                    px-3
+                    py-2
+                    text-xs
+                    font-semibold
+                    transition
+                "
+                :class="
+                    modoVista === 'dia'
+                        ? [
+                            'bg-slate-900',
+                            'text-white',
+                        ]
+                        : [
+                            'text-slate-500',
+                            'hover:bg-slate-50',
+                        ]
+                "
+                @click="
+                    modoVista = 'dia'
+                "
+            >
+                Día
+            </button>
+
+
+            <button
+                type="button"
+                class="
+                    rounded-lg
+                    px-3
+                    py-2
+                    text-xs
+                    font-semibold
+                    transition
+                "
+                :class="
+                    modoVista === 'semana'
+                        ? [
+                            'bg-slate-900',
+                            'text-white',
+                        ]
+                        : [
+                            'text-slate-500',
+                            'hover:bg-slate-50',
+                        ]
+                "
+                @click="
+                    modoVista = 'semana'
+                "
+            >
+                Semana
+            </button>
+
+        </div>
+
+
+        <!-- NUEVA CITA -->
+
+        <button
+            type="button"
+            class="
+                inline-flex
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                bg-clinica-700
+                px-4
+                py-2.5
+                text-sm
+                font-semibold
+                text-white
+                transition
+                hover:bg-clinica-800
+            "
+            @click="nuevaCita"
+        >
+
+            <Plus :size="18" />
+
+            Nueva cita
+
+        </button>
+
+    </div>
 
         </section>
 
 
-        <!-- FILTROS -->
+        <!-- =====================================================
+             FILTROS
+        ====================================================== -->
 
         <section
+            v-if="
+                modoVista === 'lista'
+            "
             class="
                 mt-6
                 rounded-2xl
@@ -701,6 +1052,8 @@ function fechaBonita(
                 "
             >
 
+                <!-- BUSCAR -->
+
                 <div class="relative">
 
                     <Search
@@ -713,6 +1066,7 @@ function fechaBonita(
                             text-slate-400
                         "
                     />
+
 
                     <input
                         v-model="buscar"
@@ -727,6 +1081,8 @@ function fechaBonita(
                 </div>
 
 
+                <!-- FECHA -->
+
                 <input
                     v-model="fecha"
                     type="date"
@@ -734,40 +1090,56 @@ function fechaBonita(
                 >
 
 
+                <!-- PROFESIONAL -->
+
                 <select
                     v-model="profesional"
                     class="input-clinica"
                 >
+
                     <option value="">
                         Todos los profesionales
                     </option>
 
+
                     <option
-                        v-for="item in profesionales"
+                        v-for="
+                            item
+                            in profesionales
+                        "
                         :key="item.id"
                         :value="item.id"
                     >
                         {{ item.nombres }}
                         {{ item.apellidos }}
                     </option>
+
                 </select>
 
+
+                <!-- ESTADO -->
 
                 <select
                     v-model="estado"
                     class="input-clinica"
                 >
+
                     <option value="">
                         Todos los estados
                     </option>
 
+
                     <option
-                        v-for="item in estados"
+                        v-for="
+                            item
+                            in estados
+                        "
                         :key="item.id"
                         :value="item.id"
                     >
                         {{ item.nombre }}
                     </option>
+
                 </select>
 
             </div>
@@ -775,9 +1147,110 @@ function fechaBonita(
         </section>
 
 
-        <!-- CITAS -->
+        <!-- =====================================================
+             SIN CITAS
+        ====================================================== -->
 
         <section
+            v-if="
+                modoVista === 'lista'
+                &&
+                !hayCitas
+            "
+                mt-5
+                rounded-2xl
+                border
+                border-dashed
+                border-slate-300
+                bg-white
+                px-6
+                py-14
+                text-center
+            "
+        >
+
+            <CalendarDays
+                :size="34"
+                class="
+                    mx-auto
+                    text-slate-300
+                "
+            />
+
+
+            <h3
+                class="
+                    mt-4
+                    font-bold
+                    text-slate-800
+                "
+            >
+                No hay citas
+            </h3>
+
+
+            <p
+                class="
+                    mt-1
+                    text-sm
+                    text-slate-500
+                "
+            >
+                No se encontraron citas con los filtros actuales.
+            </p>
+
+        </section>
+
+
+        <!-- =====================================================
+             LISTADO DE CITAS
+        ====================================================== -->
+         
+        <AgendaDia
+            v-if="
+                modoVista === 'dia'
+            "
+            :profesionales="
+                profesionales
+            "
+            :fecha-inicial="
+                fecha
+            "
+            :profesional-id="
+                profesional
+            "
+            @ver-cita="
+                abrirDetalle
+            "
+        />
+
+        <AgendaSemana
+            v-if="
+                modoVista === 'semana'
+            "
+            :profesionales="
+                profesionales
+            "
+            :fecha-inicial="
+                fecha
+            "
+            :profesional-id="
+                profesional
+            "
+            @ver-cita="
+                abrirDetalle
+            "
+            @ver-dia="
+                abrirDiaDesdeSemana
+            "
+        />
+
+        <section
+            v-if="
+                modoVista === 'lista'
+                &&
+                hayCitas
+            "
             class="
                 mt-5
                 space-y-3
@@ -785,9 +1258,14 @@ function fechaBonita(
         >
 
             <article
-                v-for="cita in citas.data"
+                v-for="
+                    cita
+                    in citas.data
+                "
                 :key="cita.id"
                 class="
+                    relative
+                    overflow-visible
                     rounded-2xl
                     border
                     border-slate-200
@@ -795,6 +1273,7 @@ function fechaBonita(
                     p-5
                     shadow-sm
                     transition
+                    hover:border-slate-300
                     hover:shadow-md
                 "
             >
@@ -804,17 +1283,19 @@ function fechaBonita(
                         flex
                         flex-col
                         gap-5
-                        lg:flex-row
-                        lg:items-center
+                        xl:flex-row
+                        xl:items-center
                     "
                 >
 
-                    <!-- HORA -->
+                    <!-- =================================================
+                         HORA
+                    ================================================== -->
 
                     <div
                         class="
                             flex
-                            min-w-36
+                            min-w-40
                             items-center
                             gap-3
                         "
@@ -825,6 +1306,7 @@ function fechaBonita(
                                 flex
                                 h-11
                                 w-11
+                                shrink-0
                                 items-center
                                 justify-center
                                 rounded-xl
@@ -832,8 +1314,13 @@ function fechaBonita(
                                 text-clinica-700
                             "
                         >
-                            <Clock3 :size="19" />
+
+                            <Clock3
+                                :size="19"
+                            />
+
                         </div>
+
 
                         <div>
 
@@ -849,6 +1336,7 @@ function fechaBonita(
                                     )
                                 }}
                             </p>
+
 
                             <p
                                 class="
@@ -868,9 +1356,16 @@ function fechaBonita(
                     </div>
 
 
-                    <!-- PACIENTE -->
+                    <!-- =================================================
+                         PACIENTE
+                    ================================================== -->
 
-                    <div class="min-w-0 flex-1">
+                    <div
+                        class="
+                            min-w-0
+                            flex-1
+                        "
+                    >
 
                         <div
                             class="
@@ -879,10 +1374,15 @@ function fechaBonita(
                                 gap-2
                             "
                         >
+
                             <UserRound
                                 :size="16"
-                                class="text-slate-400"
+                                class="
+                                    shrink-0
+                                    text-slate-400
+                                "
                             />
+
 
                             <p
                                 class="
@@ -892,27 +1392,47 @@ function fechaBonita(
                                     text-slate-900
                                 "
                             >
-                                {{ cita.paciente.nombres }}
-                                {{ cita.paciente.apellidos }}
+                                {{
+                                    cita.paciente
+                                        ?.nombres
+                                }}
+
+                                {{
+                                    cita.paciente
+                                        ?.apellidos
+                                }}
                             </p>
+
                         </div>
+
 
                         <p
                             class="
                                 mt-1
+                                truncate
                                 text-xs
                                 text-slate-500
                             "
                         >
-                            {{ cita.motivo || 'Sin motivo especificado' }}
+                            {{
+                                cita.motivo
+                                ||
+                                'Sin motivo especificado'
+                            }}
                         </p>
 
                     </div>
 
 
-                    <!-- PROFESIONAL -->
+                    <!-- =================================================
+                         PROFESIONAL
+                    ================================================== -->
 
-                    <div class="min-w-48">
+                    <div
+                        class="
+                            min-w-48
+                        "
+                    >
 
                         <div
                             class="
@@ -923,18 +1443,39 @@ function fechaBonita(
                                 text-slate-600
                             "
                         >
-                            <Stethoscope :size="15" />
 
-                            {{ cita.profesional.nombres }}
-                            {{ cita.profesional.apellidos }}
+                            <Stethoscope
+                                :size="15"
+                                class="shrink-0"
+                            />
+
+
+                            <span>
+                                {{
+                                    cita.profesional
+                                        ?.nombres
+                                }}
+
+                                {{
+                                    cita.profesional
+                                        ?.apellidos
+                                }}
+                            </span>
+
                         </div>
 
                     </div>
 
 
-                    <!-- CONSULTORIO -->
+                    <!-- =================================================
+                         CONSULTORIO
+                    ================================================== -->
 
-                    <div class="min-w-40">
+                    <div
+                        class="
+                            min-w-40
+                        "
+                    >
 
                         <div
                             class="
@@ -945,57 +1486,92 @@ function fechaBonita(
                                 text-slate-500
                             "
                         >
-                            <DoorOpen :size="15" />
 
-                            {{
-                                cita.consultorio?.nombre ||
-                                'Sin consultorio'
-                            }}
+                            <DoorOpen
+                                :size="15"
+                                class="shrink-0"
+                            />
+
+
+                            <span>
+                                {{
+                                    cita.consultorio
+                                        ?.nombre
+                                    ||
+                                    'Sin consultorio'
+                                }}
+                            </span>
+
                         </div>
 
                     </div>
 
 
-                    <!-- ESTADO -->
+                    <!-- =================================================
+                         ESTADO
+                    ================================================== -->
 
-                    <span
+                    <div
                         class="
-                            rounded-full
-                            px-3
-                            py-1.5
-                            text-xs
-                            font-semibold
-                        "
-                        :class="
-                            claseEstado(
-                                codigoEstado(cita)
-                            )
+                            shrink-0
                         "
                     >
-                        {{ cita.estado_cita.nombre }}
-                    </span>
 
+                        <span
+                            class="
+                                inline-flex
+                                rounded-full
+                                px-3
+                                py-1.5
+                                text-xs
+                                font-semibold
+                            "
+                            :class="
+                                claseEstado(
+                                    codigoEstado(cita)
+                                )
+                            "
+                        >
+                            {{
+                                cita.estado_cita
+                                    ?.nombre
+                                ??
+                                'Sin estado'
+                            }}
+                        </span>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         ACCIONES
+                    ================================================== -->
 
                     <div
                         class="
                             flex
+                            shrink-0
                             flex-wrap
                             items-center
-                            justify-end
                             gap-2
+                            xl:justify-end
                         "
                     >
 
-                        <!-- PENDIENTE -->
+                        <!-- =============================================
+                             PENDIENTE
+                        ============================================== -->
 
                         <button
                             v-if="
-                                codigoEstado(cita) ===
+                                codigoEstado(cita)
+                                ===
                                 'PENDIENTE'
                             "
                             type="button"
                             :disabled="
-                                cambiandoEstado ===
+                                cambiandoEstado
+                                ===
                                 cita.id
                             "
                             class="
@@ -1004,13 +1580,14 @@ function fechaBonita(
                                 gap-2
                                 rounded-xl
                                 bg-blue-600
-                                px-3
+                                px-3.5
                                 py-2
                                 text-xs
                                 font-semibold
                                 text-white
                                 transition
                                 hover:bg-blue-700
+                                disabled:cursor-not-allowed
                                 disabled:opacity-50
                             "
                             @click="
@@ -1020,12 +1597,14 @@ function fechaBonita(
 
                             <LoaderCircle
                                 v-if="
-                                    cambiandoEstado ===
+                                    cambiandoEstado
+                                    ===
                                     cita.id
                                 "
                                 :size="15"
                                 class="animate-spin"
                             />
+
 
                             <CheckCircle2
                                 v-else
@@ -1037,16 +1616,20 @@ function fechaBonita(
                         </button>
 
 
-                        <!-- CONFIRMADA -->
+                        <!-- =============================================
+                             CONFIRMADA
+                        ============================================== -->
 
                         <button
                             v-if="
-                                codigoEstado(cita) ===
+                                codigoEstado(cita)
+                                ===
                                 'CONFIRMADA'
                             "
                             type="button"
                             :disabled="
-                                cambiandoEstado ===
+                                cambiandoEstado
+                                ===
                                 cita.id
                             "
                             class="
@@ -1055,13 +1638,14 @@ function fechaBonita(
                                 gap-2
                                 rounded-xl
                                 bg-violet-600
-                                px-3
+                                px-3.5
                                 py-2
                                 text-xs
                                 font-semibold
                                 text-white
                                 transition
                                 hover:bg-violet-700
+                                disabled:cursor-not-allowed
                                 disabled:opacity-50
                             "
                             @click="
@@ -1069,7 +1653,19 @@ function fechaBonita(
                             "
                         >
 
+                            <LoaderCircle
+                                v-if="
+                                    cambiandoEstado
+                                    ===
+                                    cita.id
+                                "
+                                :size="15"
+                                class="animate-spin"
+                            />
+
+
                             <Play
+                                v-else
                                 :size="15"
                             />
 
@@ -1078,16 +1674,20 @@ function fechaBonita(
                         </button>
 
 
-                        <!-- EN ATENCIÓN -->
+                        <!-- =============================================
+                             EN ATENCIÓN
+                        ============================================== -->
 
                         <button
                             v-if="
-                                codigoEstado(cita) ===
+                                codigoEstado(cita)
+                                ===
                                 'EN_ATENCION'
                             "
                             type="button"
                             :disabled="
-                                cambiandoEstado ===
+                                cambiandoEstado
+                                ===
                                 cita.id
                             "
                             class="
@@ -1096,13 +1696,14 @@ function fechaBonita(
                                 gap-2
                                 rounded-xl
                                 bg-emerald-600
-                                px-3
+                                px-3.5
                                 py-2
                                 text-xs
                                 font-semibold
                                 text-white
                                 transition
                                 hover:bg-emerald-700
+                                disabled:cursor-not-allowed
                                 disabled:opacity-50
                             "
                             @click="
@@ -1110,7 +1711,19 @@ function fechaBonita(
                             "
                         >
 
+                            <LoaderCircle
+                                v-if="
+                                    cambiandoEstado
+                                    ===
+                                    cita.id
+                                "
+                                :size="15"
+                                class="animate-spin"
+                            />
+
+
                             <Flag
+                                v-else
                                 :size="15"
                             />
 
@@ -1119,11 +1732,14 @@ function fechaBonita(
                         </button>
 
 
-                        <!-- ATENDIDA -->
+                        <!-- =============================================
+                             ATENDIDA
+                        ============================================== -->
 
                         <div
                             v-if="
-                                codigoEstado(cita) ===
+                                codigoEstado(cita)
+                                ===
                                 'ATENDIDA'
                             "
                             class="
@@ -1144,89 +1760,298 @@ function fechaBonita(
                                 :size="15"
                             />
 
-                            Atención finalizada
+                            Finalizada
 
                         </div>
 
 
-                        <!-- EDITAR -->
+                        <!-- =============================================
+                             MENÚ
+                        ============================================== -->
 
-                        <button
-                            v-if="
-                                ![
-                                    'CANCELADA',
-                                    'ATENDIDA'
-                                ].includes(
-                                    codigoEstado(cita)
-                                )
-                            "
-                            type="button"
+                        <details
                             class="
-                                inline-flex
-                                items-center
-                                gap-2
-                                rounded-xl
-                                border
-                                border-slate-200
-                                bg-white
-                                px-3
-                                py-2
-                                text-xs
-                                font-semibold
-                                text-slate-600
-                                transition
-                                hover:bg-slate-50
-                            "
-                            @click="
-                                editarCita(cita)
+                                group
+                                relative
                             "
                         >
 
-                            <Pencil :size="14" />
+                            <summary
+                                class="
+                                    flex
+                                    h-9
+                                    w-9
+                                    cursor-pointer
+                                    list-none
+                                    items-center
+                                    justify-center
+                                    rounded-xl
+                                    border
+                                    border-slate-200
+                                    bg-white
+                                    text-slate-500
+                                    transition
+                                    hover:border-slate-300
+                                    hover:bg-slate-50
+                                    hover:text-slate-800
+                                    [&::-webkit-details-marker]:hidden
+                                "
+                            >
 
-                            Editar
+                                <EllipsisVertical
+                                    :size="18"
+                                />
 
-                        </button>
+                            </summary>
 
 
-                        <!-- CANCELAR -->
+                            <div
+                                class="
+                                    absolute
+                                    right-0
+                                    top-11
+                                    z-50
+                                    w-52
+                                    overflow-hidden
+                                    rounded-xl
+                                    border
+                                    border-slate-200
+                                    bg-white
+                                    p-1.5
+                                    shadow-xl
+                                "
+                            >
 
-                        <button
-                            v-if="
-                                [
-                                    'PENDIENTE',
-                                    'CONFIRMADA'
-                                ].includes(
-                                    codigoEstado(cita)
-                                )
-                            "
-                            type="button"
-                            class="
-                                inline-flex
-                                items-center
-                                gap-2
-                                rounded-xl
-                                border
-                                border-rose-200
-                                bg-white
-                                px-3
-                                py-2
-                                text-xs
-                                font-semibold
-                                text-rose-600
-                                transition
-                                hover:bg-rose-50
-                            "
-                            @click="
-                                abrirCancelar(cita)
-                            "
-                        >
+                                <!-- VER DETALLE -->
 
-                            <CalendarX :size="14" />
+                                <button
+                                    type="button"
+                                    class="
+                                        flex
+                                        w-full
+                                        items-center
+                                        gap-3
+                                        rounded-lg
+                                        px-3
+                                        py-2.5
+                                        text-left
+                                        text-sm
+                                        font-medium
+                                        text-slate-700
+                                        transition
+                                        hover:bg-slate-50
+                                    "
+                                    @click="
+                                        abrirDetalle(cita)
+                                    "
+                                >
 
-                            Cancelar
+                                    <Eye
+                                        :size="16"
+                                        class="
+                                            text-slate-400
+                                        "
+                                    />
 
-                        </button>
+                                    Ver detalle
+
+                                </button>
+
+
+                                <!-- EDITAR -->
+
+                                <button
+                                    v-if="
+                                        [
+                                            'PENDIENTE',
+                                            'CONFIRMADA'
+                                        ].includes(
+                                            codigoEstado(cita)
+                                        )
+                                    "
+                                    type="button"
+                                    class="
+                                        flex
+                                        w-full
+                                        items-center
+                                        gap-3
+                                        rounded-lg
+                                        px-3
+                                        py-2.5
+                                        text-left
+                                        text-sm
+                                        font-medium
+                                        text-slate-700
+                                        transition
+                                        hover:bg-slate-50
+                                    "
+                                    @click="
+                                        editarCita(cita)
+                                    "
+                                >
+
+                                    <Pencil
+                                        :size="16"
+                                        class="
+                                            text-slate-400
+                                        "
+                                    />
+
+                                    Editar cita
+
+                                </button>
+
+
+                                <!-- REPROGRAMAR -->
+
+                                <button
+                                    v-if="
+                                        [
+                                            'PENDIENTE',
+                                            'CONFIRMADA'
+                                        ].includes(
+                                            codigoEstado(cita)
+                                        )
+                                    "
+                                    type="button"
+                                    class="
+                                        flex
+                                        w-full
+                                        items-center
+                                        gap-3
+                                        rounded-lg
+                                        px-3
+                                        py-2.5
+                                        text-left
+                                        text-sm
+                                        font-medium
+                                        text-blue-700
+                                        transition
+                                        hover:bg-blue-50
+                                    "
+                                    @click="
+                                        abrirReprogramar(cita)
+                                    "
+                                >
+
+                                    <CalendarClock
+                                        :size="16"
+                                    />
+
+                                    Reprogramar
+
+                                </button>
+
+
+                                <!-- SEPARADOR -->
+
+                                <div
+                                    v-if="
+                                        [
+                                            'PENDIENTE',
+                                            'CONFIRMADA'
+                                        ].includes(
+                                            codigoEstado(cita)
+                                        )
+                                    "
+                                    class="
+                                        my-1
+                                        border-t
+                                        border-slate-100
+                                    "
+                                />
+
+
+                                <!-- NO ASISTIÓ -->
+
+                                <button
+                                    v-if="
+                                        [
+                                            'PENDIENTE',
+                                            'CONFIRMADA'
+                                        ].includes(
+                                            codigoEstado(cita)
+                                        )
+                                    "
+                                    type="button"
+                                    :disabled="
+                                        cambiandoEstado
+                                        ===
+                                        cita.id
+                                    "
+                                    class="
+                                        flex
+                                        w-full
+                                        items-center
+                                        gap-3
+                                        rounded-lg
+                                        px-3
+                                        py-2.5
+                                        text-left
+                                        text-sm
+                                        font-medium
+                                        text-slate-600
+                                        transition
+                                        hover:bg-slate-100
+                                        disabled:opacity-50
+                                    "
+                                    @click="
+                                        marcarNoAsistio(cita)
+                                    "
+                                >
+
+                                    <UserRound
+                                        :size="16"
+                                    />
+
+                                    No asistió
+
+                                </button>
+
+
+                                <!-- CANCELAR -->
+
+                                <button
+                                    v-if="
+                                        [
+                                            'PENDIENTE',
+                                            'CONFIRMADA'
+                                        ].includes(
+                                            codigoEstado(cita)
+                                        )
+                                    "
+                                    type="button"
+                                    class="
+                                        flex
+                                        w-full
+                                        items-center
+                                        gap-3
+                                        rounded-lg
+                                        px-3
+                                        py-2.5
+                                        text-left
+                                        text-sm
+                                        font-medium
+                                        text-rose-600
+                                        transition
+                                        hover:bg-rose-50
+                                    "
+                                    @click="
+                                        abrirCancelar(cita)
+                                    "
+                                >
+
+                                    <CalendarX
+                                        :size="16"
+                                    />
+
+                                    Cancelar cita
+
+                                </button>
+
+                            </div>
+
+                        </details>
 
                     </div>
 
@@ -1237,51 +2062,95 @@ function fechaBonita(
         </section>
 
 
-        <!-- VACÍO -->
+        <!-- =====================================================
+             PAGINACIÓN
+        ====================================================== -->
 
-        <section
-            v-if="!hayCitas"
+        <div
+            v-if="
+                modoVista === 'lista'
+                &&
+                citas.links
+                &&
+                citas.links.length > 3
+            "
             class="
-                mt-5
+                mt-6
                 flex
-                min-h-72
-                flex-col
-                items-center
+                flex-wrap
                 justify-center
-                rounded-2xl
-                border
-                border-slate-200
-                bg-white
-                text-center
+                gap-2
             "
         >
 
-            <CalendarDays
-                :size="32"
-                class="text-slate-300"
-            />
-
-            <h3
-                class="
-                    mt-4
-                    font-semibold
-                    text-slate-800
+            <template
+                v-for="
+                    link
+                    in citas.links
                 "
+                :key="link.label"
             >
-                No hay citas
-            </h3>
 
-            <p
-                class="
-                    mt-1
-                    text-sm
-                    text-slate-500
-                "
-            >
-                Programa una nueva cita para comenzar.
-            </p>
+                <span
+                    v-if="!link.url"
+                    class="
+                        rounded-lg
+                        border
+                        border-slate-200
+                        px-3
+                        py-2
+                        text-sm
+                        text-slate-300
+                    "
+                    v-html="link.label"
+                />
 
-        </section>
+
+                <Link
+                    v-else
+                    :href="link.url"
+                    preserve-scroll
+                    class="
+                        rounded-lg
+                        border
+                        px-3
+                        py-2
+                        text-sm
+                        font-medium
+                        transition
+                    "
+                    :class="
+                        link.active
+                            ? [
+                                'border-clinica-600',
+                                'bg-clinica-600',
+                                'text-white',
+                            ]
+                            : [
+                                'border-slate-200',
+                                'bg-white',
+                                'text-slate-600',
+                                'hover:bg-slate-50',
+                            ]
+                    "
+                    v-html="link.label"
+                />
+
+            </template>
+
+        </div>
+
+
+        <!-- =====================================================
+             COMPONENTES
+        ====================================================== -->
+
+        <CitaDetalleDrawer
+            :open="detalleAbierto"
+            :cita="citaDetalle"
+            @close="cerrarDetalle"
+        />
+
 
         <CitaFormDrawer
             :open="drawerAbierto"
@@ -1298,6 +2167,25 @@ function fechaBonita(
             :open="cancelarModalAbierto"
             :cita="citaCancelar"
             @close="cerrarCancelar"
+        />
+
+
+        <ReprogramarCitaModal
+            :open="reprogramarModalAbierto"
+            :cita="citaReprogramar"
+            :profesionales="profesionales"
+            :consultorios="consultorios"
+            @close="cerrarReprogramar"
+        />
+
+
+        <FinalizarAtencionModal
+            :open="finalizarModalAbierto"
+            :cita="citaFinalizar"
+            :profesionales="profesionales"
+            :consultorios="consultorios"
+            @close="cerrarFinalizarAtencion"
+            @success="cerrarFinalizarAtencion"
         />
 
     </AppLayout>

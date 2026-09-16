@@ -581,7 +581,7 @@
 
             <div class="buttons">
 
-                <a href="/login" class="btn-primary">
+                <a href="/clinica" class="btn-primary">
 
                     Ingresar al sistema
 

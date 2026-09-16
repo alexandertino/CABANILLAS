@@ -43,13 +43,7 @@ class StorePagoRequest extends FormRequest
                 'date',
             ],
 
-            'referencia' => [
-                'nullable',
-                'string',
-                'max:150',
-            ],
-
-            'observaciones' => [
+              'observaciones' => [
                 'nullable',
                 'string',
             ],

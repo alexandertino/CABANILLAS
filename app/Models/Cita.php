@@ -10,12 +10,15 @@ use App\Models\Profesional;
 use App\Models\Consultorio;
 use App\Models\EstadoCita;
 use App\Models\ServicioCita;
+use App\Models\HistorialEstadoCita;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Cita extends Model
 {
     protected $table = 'citas';
 
     protected $fillable = [
+        'cita_origen_id',
         'paciente_id',
         'profesional_id',
         'consultorio_id',
@@ -29,6 +32,21 @@ class Cita extends Model
         'motivo_cancelacion',
         'usuario_creador_id',
     ];
+    public function citaOrigen()
+    {
+        return $this->belongsTo(
+            Cita::class,
+            'cita_origen_id'
+        );
+    }
+    
+    public function citasReprogramadas()
+    {
+        return $this->hasMany(
+            Cita::class,
+            'cita_origen_id'
+        );
+    }
 
     protected function casts(): array
     {
@@ -90,4 +108,67 @@ class Cita extends Model
     {
         return $this->hasMany(Pago::class);
     }
+
+    public function totalCita(): float
+    {
+        return (float) $this
+            ->serviciosCita()
+            ->sum('total');
+    }
+
+    public function totalPagado(): float
+    {
+        return (float) $this
+            ->pagos()
+            ->where(
+                'estado',
+                Pago::ESTADO_REGISTRADO
+            )
+            ->sum('monto');
+    }
+
+    public function saldoPendiente(): float
+    {
+        return max(
+            $this->totalCita()
+            -
+            $this->totalPagado(),
+            0
+        );
+    }
+
+    public function estadoPago(): string
+    {
+        $total =
+            $this->totalCita();
+
+        $pagado =
+            $this->totalPagado();
+
+
+        if (
+            $pagado <= 0
+        ) {
+            return 'PENDIENTE';
+        }
+
+
+        if (
+            $pagado < $total
+        ) {
+            return 'PARCIAL';
+        }
+
+
+        return 'PAGADO';
+    }
+
+    public function tratamientoCita(): HasOne
+    {
+        return $this->hasOne(
+            TratamientoCita::class,
+            'cita_id'
+        );
+    }
+
 }

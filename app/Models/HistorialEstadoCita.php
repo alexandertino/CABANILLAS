@@ -7,9 +7,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class HistorialEstadoCita extends Model
 {
-    protected $table = 'historial_estados_cita';
+    protected $table =
+        'historial_estados_cita';
 
-    public $timestamps = false;
+
+    public $timestamps =
+        false;
+
 
     protected $fillable = [
         'cita_id',
@@ -20,17 +24,24 @@ class HistorialEstadoCita extends Model
         'fecha_cambio',
     ];
 
+
     protected function casts(): array
     {
         return [
-            'fecha_cambio' => 'datetime',
+            'fecha_cambio' =>
+                'datetime',
         ];
     }
 
+
     public function cita(): BelongsTo
     {
-        return $this->belongsTo(Cita::class);
+        return $this->belongsTo(
+            Cita::class,
+            'cita_id'
+        );
     }
+
 
     public function estadoAnterior(): BelongsTo
     {
@@ -40,6 +51,7 @@ class HistorialEstadoCita extends Model
         );
     }
 
+
     public function estadoNuevo(): BelongsTo
     {
         return $this->belongsTo(
@@ -48,8 +60,12 @@ class HistorialEstadoCita extends Model
         );
     }
 
+
     public function usuario(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(
+            User::class,
+            'usuario_id'
+        );
     }
 }
