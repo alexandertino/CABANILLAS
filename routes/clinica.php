@@ -11,6 +11,9 @@ use App\Http\Controllers\Clinica\ServicioController;
 use App\Http\Controllers\Clinica\DashboardController;
 use App\Http\Controllers\Clinica\TratamientoController;
 use App\Http\Controllers\Clinica\UsuarioController;
+use App\Http\Controllers\Clinica\AuditoriaController;
+use App\Http\Controllers\Clinica\SeguimientoClinicoController;
+use App\Http\Controllers\Clinica\SeguimientoImagenController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('clinica')
@@ -320,6 +323,124 @@ Route::prefix('clinica')
             'tratamientos.show'
         )->middleware('can:tratamientos.ver');
 
+        Route::get(
+            'pacientes/{paciente}/seguimiento-clinico',
+            [
+                SeguimientoClinicoController::class,
+                'pagina',
+            ]
+        )
+            ->middleware(
+                'can:seguimientos.ver'
+            )
+            ->name(
+                'seguimientos.pagina'
+            );
+
+        Route::post(
+            'seguimientos/{seguimiento}/imagenes',
+            [
+                SeguimientoImagenController::class,
+                'store',
+            ]
+        )
+            ->middleware(
+                'can:seguimientos.editar'
+            )
+            ->name(
+                'seguimiento-imagenes.store'
+            );
+
+        Route::get(
+            'seguimiento-imagenes/{imagen}/ver',
+            [
+                SeguimientoImagenController::class,
+                'ver',
+            ]
+        )
+            ->middleware(
+                'can:seguimientos.ver'
+            )
+            ->name(
+                'seguimiento-imagenes.ver'
+            );
+
+        Route::get(
+            'seguimiento-imagenes/{imagen}/miniatura',
+            [
+                SeguimientoImagenController::class,
+                'miniatura',
+            ]
+        )
+            ->middleware(
+                'can:seguimientos.ver'
+            )
+            ->name(
+                'seguimiento-imagenes.miniatura'
+            );
+
+        Route::delete(
+            'seguimiento-imagenes/{imagen}',
+            [
+                SeguimientoImagenController::class,
+                'destroy',
+            ]
+        )
+            ->middleware(
+                'can:seguimientos.editar'
+            )
+            ->name(
+                'seguimiento-imagenes.destroy'
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Seguimientos clínicos
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            'pacientes/{paciente}/seguimientos',
+            [
+                SeguimientoClinicoController::class,
+                'index',
+            ]
+        )
+            ->middleware(
+                'can:seguimientos.ver'
+            )
+            ->name(
+                'seguimientos.index'
+            );
+
+        Route::post(
+            'pacientes/{paciente}/seguimientos',
+            [
+                SeguimientoClinicoController::class,
+                'store',
+            ]
+        )
+            ->middleware(
+                'can:seguimientos.crear'
+            )
+            ->name(
+                'seguimientos.store'
+            );
+
+        Route::patch(
+            'seguimientos/{seguimiento}',
+            [
+                SeguimientoClinicoController::class,
+                'update',
+            ]
+        )
+            ->middleware(
+                'can:seguimientos.editar'
+            )
+            ->name(
+                'seguimientos.update'
+            );
+            
         /*
         |--------------------------------------------------------------------------
         | Usuarios
@@ -337,6 +458,12 @@ Route::prefix('clinica')
             ->middlewareFor('index', 'can:usuarios.ver')
             ->middlewareFor('store', 'can:usuarios.crear')
             ->middlewareFor('update', 'can:usuarios.editar');
+
+        Route::get(
+            'auditoria',
+            [AuditoriaController::class, 'index']
+        )->name('auditoria.index')
+            ->middleware('can:auditoria.ver');
 
         Route::patch(
             'usuarios/{usuario}/desactivar',

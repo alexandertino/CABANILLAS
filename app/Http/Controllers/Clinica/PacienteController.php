@@ -7,6 +7,7 @@ use App\Http\Requests\Pacientes\StorePacienteRequest;
 use App\Http\Requests\Pacientes\UpdatePacienteRequest;
 use App\Models\Paciente;
 use App\Support\Clinica\AlcanceClinico;
+use App\Support\Auditoria;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -115,6 +116,17 @@ class PacienteController extends Controller
                     ),
             ]);
 
+            Auditoria::registrar(
+                'pacientes',
+                'crear',
+                'Paciente creado',
+                $paciente,
+                despues: Auditoria::atributos(
+                    $paciente,
+                    Auditoria::PACIENTE
+                )
+            );
+
         });
 
         return back()->with(
@@ -127,7 +139,24 @@ class PacienteController extends Controller
         UpdatePacienteRequest $request,
         Paciente $paciente
     ): RedirectResponse {
+        $antes = Auditoria::atributos(
+            $paciente,
+            Auditoria::PACIENTE
+        );
+
         $paciente->update($request->validated());
+
+        Auditoria::registrar(
+            'pacientes',
+            'editar',
+            'Paciente editado',
+            $paciente,
+            $antes,
+            Auditoria::atributos(
+                $paciente->refresh(),
+                Auditoria::PACIENTE
+            )
+        );
 
         return back()->with(
             'success',
@@ -139,9 +168,26 @@ class PacienteController extends Controller
         Paciente $paciente
     ): RedirectResponse {
 
+        $antes = Auditoria::atributos(
+            $paciente,
+            Auditoria::PACIENTE
+        );
+
         $paciente->update([
             'activo' => false,
         ]);
+
+        Auditoria::registrar(
+            'pacientes',
+            'desactivar',
+            'Paciente desactivado',
+            $paciente,
+            $antes,
+            Auditoria::atributos(
+                $paciente->refresh(),
+                Auditoria::PACIENTE
+            )
+        );
 
         return back()->with(
             'success',
@@ -154,9 +200,26 @@ class PacienteController extends Controller
         Paciente $paciente
     ): RedirectResponse {
 
+        $antes = Auditoria::atributos(
+            $paciente,
+            Auditoria::PACIENTE
+        );
+
         $paciente->update([
             'activo' => true,
         ]);
+
+        Auditoria::registrar(
+            'pacientes',
+            'activar',
+            'Paciente activado',
+            $paciente,
+            $antes,
+            Auditoria::atributos(
+                $paciente->refresh(),
+                Auditoria::PACIENTE
+            )
+        );
 
         return back()->with(
             'success',

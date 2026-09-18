@@ -12,6 +12,7 @@ use App\Models\HistorialEstadoCita;
 use App\Models\Profesional;
 use App\Models\Servicio;
 use App\Support\Clinica\AlcanceClinico;
+use App\Support\Auditoria;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -1526,6 +1527,17 @@ class CitaController extends Controller
                         now(),
 
                 ]);
+
+                Auditoria::registrar(
+                    'citas',
+                    'crear',
+                    'Cita creada',
+                    $cita,
+                    despues: Auditoria::atributos(
+                        $cita,
+                        Auditoria::CITA
+                    )
+                );
             }
         );
 
@@ -1569,6 +1581,11 @@ class CitaController extends Controller
                 AlcanceClinico::autorizarCita(
                     $request->user(),
                     $cita
+                );
+
+                $antesCita = Auditoria::atributos(
+                    $cita,
+                    Auditoria::CITA
                 );
 
 
@@ -2003,6 +2020,18 @@ class CitaController extends Controller
                             now(),
                     ]);
                 }
+
+                Auditoria::registrar(
+                    'citas',
+                    'editar',
+                    'Cita editada',
+                    $cita,
+                    $antesCita,
+                    Auditoria::atributos(
+                        $cita->refresh(),
+                        Auditoria::CITA
+                    )
+                );
             }
         );
 
@@ -2217,6 +2246,11 @@ class CitaController extends Controller
                     $cita
                         ->estado_cita_id;
 
+                $antesCita = Auditoria::atributos(
+                    $cita,
+                    Auditoria::CITA
+                );
+
 
                 if (
                     $estadoAnterior ===
@@ -2328,6 +2362,25 @@ class CitaController extends Controller
                     'fecha_cambio' =>
                         now(),
                 ]);
+
+                $accion = match ($nuevoEstado->codigo) {
+                    'CONFIRMADA' => 'confirmar',
+                    'EN_ATENCION' => 'iniciar',
+                    'NO_ASISTIO' => 'no_asistio',
+                    default => 'cambiar_estado',
+                };
+
+                Auditoria::registrar(
+                    'citas',
+                    $accion,
+                    'Estado de cita actualizado',
+                    $cita,
+                    $antesCita,
+                    Auditoria::atributos(
+                        $cita->refresh(),
+                        Auditoria::CITA
+                    )
+                );
             }
         );
 
@@ -2442,6 +2495,11 @@ class CitaController extends Controller
                     $cita
                         ->estado_cita_id;
 
+                $antesCita = Auditoria::atributos(
+                    $cita,
+                    Auditoria::CITA
+                );
+
 
                 /*
                 * NO tocamos tratamiento_citas.
@@ -2492,6 +2550,18 @@ class CitaController extends Controller
                     'fecha_cambio' =>
                         now(),
                 ]);
+
+                Auditoria::registrar(
+                    'citas',
+                    'cancelar',
+                    'Cita cancelada',
+                    $cita,
+                    $antesCita,
+                    Auditoria::atributos(
+                        $cita->refresh(),
+                        Auditoria::CITA
+                    )
+                );
             }
         );
 
@@ -2742,6 +2812,11 @@ class CitaController extends Controller
                     $citaBloqueada
                         ->estado_cita_id;
 
+                $antesCita = Auditoria::atributos(
+                    $citaBloqueada,
+                    Auditoria::CITA
+                );
+
 
                 /*
                 |--------------------------------------------------------------------------
@@ -2988,6 +3063,21 @@ class CitaController extends Controller
                         now(),
 
                 ]);
+
+                Auditoria::registrar(
+                    'citas',
+                    'reprogramar',
+                    'Cita reprogramada',
+                    $citaBloqueada,
+                    $antesCita,
+                    Auditoria::atributos(
+                        $citaBloqueada->refresh(),
+                        Auditoria::CITA
+                    ),
+                    [
+                        'nueva_cita_id' => $nuevaCita->id,
+                    ]
+                );
             }
         );
 
@@ -3406,6 +3496,16 @@ class CitaController extends Controller
                     ->tratamientoCitas()
                     ->max('numero_sesion');
 
+            Auditoria::registrar(
+                'tratamientos',
+                'continuar',
+                'Nueva sesión de tratamiento programada',
+                $tratamiento,
+                propiedades: [
+                    'numero_sesion' => $ultimaSesion + 1,
+                ]
+            );
+
 
             return [
 
@@ -3457,6 +3557,17 @@ class CitaController extends Controller
                     null,
 
             ]);
+
+        Auditoria::registrar(
+            'tratamientos',
+            'crear',
+            'Tratamiento creado',
+            $tratamiento,
+            despues: Auditoria::atributos(
+                $tratamiento,
+                Auditoria::TRATAMIENTO
+            )
+        );
 
 
         return [
@@ -3555,6 +3666,11 @@ class CitaController extends Controller
                 $estadoAnteriorId =
                     $cita->estado_cita_id;
 
+                $antesCita = Auditoria::atributos(
+                    $cita,
+                    Auditoria::CITA
+                );
+
 
                 /*
                 |--------------------------------------------------------------------------
@@ -3581,6 +3697,9 @@ class CitaController extends Controller
                 $tratamiento =
                     null;
 
+                $antesTratamiento =
+                    null;
+
 
                 if (
                     $relacionTratamiento
@@ -3600,6 +3719,11 @@ class CitaController extends Controller
                     AlcanceClinico::autorizarTratamiento(
                         $request->user(),
                         $tratamiento
+                    );
+
+                    $antesTratamiento = Auditoria::atributos(
+                        $tratamiento,
+                        Auditoria::TRATAMIENTO
                     );
 
 
@@ -4069,6 +4193,26 @@ class CitaController extends Controller
 
 
                     $tratamiento->save();
+
+                    Auditoria::registrar(
+                        'tratamientos',
+                        $request->accion_tratamiento === 'COMPLETAR'
+                            ? 'completar'
+                            : 'continuar',
+                        $request->accion_tratamiento === 'COMPLETAR'
+                            ? 'Tratamiento completado'
+                            : 'Tratamiento continuado',
+                        $tratamiento,
+                        $antesTratamiento ?? [],
+                        Auditoria::atributos(
+                            $tratamiento->refresh(),
+                            Auditoria::TRATAMIENTO
+                        ),
+                        [
+                            'accion_tratamiento' =>
+                                $request->accion_tratamiento,
+                        ]
+                    );
                 }
 
 
@@ -4116,6 +4260,18 @@ class CitaController extends Controller
                         now(),
 
                 ]);
+
+                Auditoria::registrar(
+                    'citas',
+                    'finalizar',
+                    'Atención finalizada',
+                    $cita,
+                    $antesCita,
+                    Auditoria::atributos(
+                        $cita->refresh(),
+                        Auditoria::CITA
+                    )
+                );
             }
         );
 
@@ -4175,6 +4331,11 @@ class CitaController extends Controller
             TratamientoPaciente::ESTADO_PLANIFICADO
         ) {
 
+            $antesTratamiento = Auditoria::atributos(
+                $tratamiento,
+                Auditoria::TRATAMIENTO
+            );
+
             $tratamiento->estado =
                 TratamientoPaciente::ESTADO_EN_PROCESO;
 
@@ -4186,6 +4347,18 @@ class CitaController extends Controller
 
 
             $tratamiento->save();
+
+            Auditoria::registrar(
+                'tratamientos',
+                'iniciar',
+                'Tratamiento iniciado',
+                $tratamiento,
+                $antesTratamiento,
+                Auditoria::atributos(
+                    $tratamiento->refresh(),
+                    Auditoria::TRATAMIENTO
+                )
+            );
         }
     }
 }

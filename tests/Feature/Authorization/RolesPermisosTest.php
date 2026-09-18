@@ -31,7 +31,9 @@ class RolesPermisosTest extends TestCase
             'email' => 'admin@cabanillas.com',
         ]);
 
-        $this->seed(RolesPermisosSeeder::class);
+        $this->seed(
+            RolesPermisosSeeder::class
+        );
     }
 
     protected function tearDown(): void
@@ -44,14 +46,45 @@ class RolesPermisosTest extends TestCase
 
     public function test_el_seeder_es_idempotente_y_asigna_el_administrador_existente(): void
     {
-        $this->seed(RolesPermisosSeeder::class);
+        /*
+        |--------------------------------------------------------------------------
+        | Ejecutarlo otra vez no debe duplicar nada
+        |--------------------------------------------------------------------------
+        */
 
-        $this->assertDatabaseCount('roles', 3);
-        $this->assertDatabaseCount('permissions', 32);
-        $this->assertDatabaseCount('model_has_roles', 1);
+        $this->seed(
+            RolesPermisosSeeder::class
+        );
+
+        $this->assertDatabaseCount(
+            'roles',
+            3
+        );
+
+        /*
+         * 33 anteriores
+         * + 3 de seguimiento clínico.
+         */
+        $this->assertDatabaseCount(
+            'permissions',
+            36
+        );
+
+        $this->assertDatabaseCount(
+            'model_has_roles',
+            1
+        );
+
+        /*
+         * ADMINISTRADOR = 33
+         * RECEPCIONISTA = 17
+         * ODONTOLOGO    = 12
+         *
+         * Total = 62 relaciones.
+         */
         $this->assertDatabaseCount(
             'role_has_permissions',
-            58
+            62
         );
 
         $this->administrador->refresh();
@@ -62,29 +95,80 @@ class RolesPermisosTest extends TestCase
             )
         );
 
+        /*
+         * El administrador NO recibe los
+         * 3 permisos clínicos privados.
+         */
         $this->assertCount(
-            32,
+            33,
             $this->administrador
                 ->getAllPermissions()
+        );
+
+        $this->assertFalse(
+            $this->administrador
+                ->can(
+                    'seguimientos.ver'
+                )
+        );
+
+        $this->assertFalse(
+            $this->administrador
+                ->can(
+                    'seguimientos.crear'
+                )
+        );
+
+        $this->assertFalse(
+            $this->administrador
+                ->can(
+                    'seguimientos.editar'
+                )
         );
     }
 
     public function test_cada_rol_tiene_exactamente_los_permisos_definidos(): void
     {
+        /*
+        |--------------------------------------------------------------------------
+        | ADMINISTRADOR
+        |--------------------------------------------------------------------------
+        |
+        | Todos los permisos generales menos
+        | el contenido clínico privado.
+        |
+        */
+
         $this->assertRolePermissions(
             'ADMINISTRADOR',
             Permission::query()
+                ->whereNotIn(
+                    'name',
+                    [
+                        'seguimientos.ver',
+                        'seguimientos.crear',
+                        'seguimientos.editar',
+                    ]
+                )
                 ->pluck('name')
                 ->all()
         );
+
+        /*
+        |--------------------------------------------------------------------------
+        | RECEPCIONISTA
+        |--------------------------------------------------------------------------
+        */
 
         $this->assertRolePermissions(
             'RECEPCIONISTA',
             [
                 'dashboard.ver',
+
                 'pacientes.ver',
                 'pacientes.crear',
                 'pacientes.editar',
+
                 'citas.ver',
                 'citas.crear',
                 'citas.editar',
@@ -92,27 +176,43 @@ class RolesPermisosTest extends TestCase
                 'citas.cancelar',
                 'citas.no_asistio',
                 'citas.reprogramar',
+
                 'pagos.ver',
                 'pagos.registrar',
+
                 'tratamientos.ver',
+
                 'profesionales.ver',
                 'servicios.ver',
                 'consultorios.ver',
             ]
         );
 
+        /*
+        |--------------------------------------------------------------------------
+        | ODONTOLOGO
+        |--------------------------------------------------------------------------
+        */
+
         $this->assertRolePermissions(
             'ODONTOLOGO',
             [
                 'dashboard.ver',
+
                 'pacientes.ver',
+
                 'citas.ver',
                 'citas.iniciar',
                 'citas.finalizar',
+
                 'tratamientos.ver',
                 'tratamientos.crear',
                 'tratamientos.editar',
                 'tratamientos.finalizar',
+
+                'seguimientos.ver',
+                'seguimientos.crear',
+                'seguimientos.editar',
             ]
         );
     }
@@ -136,32 +236,43 @@ class RolesPermisosTest extends TestCase
         $lector = User::factory()->create([
             'id' => 11,
         ]);
-        $lector->givePermissionTo('pagos.ver');
+
+        $lector->givePermissionTo(
+            'pagos.ver'
+        );
 
         $this->actingAs($lector);
 
         $this->get('/clinica/pagos')
             ->assertOk();
 
-        $this->getJson('/clinica/pagos/pendientes')
-            ->assertOk();
+        $this->getJson(
+            '/clinica/pagos/pendientes'
+        )->assertOk();
 
         $this->getJson(
             '/clinica/pagos/buscar-citas'
         )->assertUnprocessable();
 
-        $this->postJson('/clinica/pagos')
-            ->assertForbidden();
+        $this->postJson(
+            '/clinica/pagos'
+        )->assertForbidden();
     }
 
     public function test_recepcion_puede_consultar_catalogos_pero_no_modificarlos(): void
     {
-        $recepcionista = User::factory()->create([
-            'id' => 12,
-        ]);
-        $recepcionista->assignRole('RECEPCIONISTA');
+        $recepcionista =
+            User::factory()->create([
+                'id' => 12,
+            ]);
 
-        $this->actingAs($recepcionista);
+        $recepcionista->assignRole(
+            'RECEPCIONISTA'
+        );
+
+        $this->actingAs(
+            $recepcionista
+        );
 
         $this->get('/clinica/citas')
             ->assertOk();
@@ -169,70 +280,186 @@ class RolesPermisosTest extends TestCase
         $this->get('/clinica/pagos')
             ->assertOk();
 
-        $this->postJson('/clinica/pagos')
-            ->assertUnprocessable();
+        $this->postJson(
+            '/clinica/pagos'
+        )->assertUnprocessable();
 
-        $this->postJson('/clinica/estados-cita')
-            ->assertForbidden();
+        $this->postJson(
+            '/clinica/estados-cita'
+        )->assertForbidden();
 
-        $this->postJson('/clinica/metodos-pago')
-            ->assertForbidden();
+        $this->postJson(
+            '/clinica/metodos-pago'
+        )->assertForbidden();
+
+        /*
+         * Recepción tampoco debe acceder
+         * al contenido clínico privado.
+         */
+        $this->assertFalse(
+            $recepcionista->can(
+                'seguimientos.ver'
+            )
+        );
+
+        $this->assertFalse(
+            $recepcionista->can(
+                'seguimientos.crear'
+            )
+        );
+
+        $this->assertFalse(
+            $recepcionista->can(
+                'seguimientos.editar'
+            )
+        );
+    }
+
+    public function test_odontologo_es_el_unico_rol_con_permisos_de_seguimiento_clinico(): void
+    {
+        $odontologo =
+            User::factory()->create([
+                'id' => 16,
+            ]);
+
+        $odontologo->assignRole(
+            'ODONTOLOGO'
+        );
+
+        $this->assertTrue(
+            $odontologo->can(
+                'seguimientos.ver'
+            )
+        );
+
+        $this->assertTrue(
+            $odontologo->can(
+                'seguimientos.crear'
+            )
+        );
+
+        $this->assertTrue(
+            $odontologo->can(
+                'seguimientos.editar'
+            )
+        );
+
+        $this->assertFalse(
+            $this->administrador->can(
+                'seguimientos.ver'
+            )
+        );
+
+        $recepcionista =
+            User::factory()->create([
+                'id' => 17,
+            ]);
+
+        $recepcionista->assignRole(
+            'RECEPCIONISTA'
+        );
+
+        $this->assertFalse(
+            $recepcionista->can(
+                'seguimientos.ver'
+            )
+        );
     }
 
     public function test_cambiar_estado_aplica_el_permiso_dinamico_antes_de_mutar(): void
     {
         $this->crearCitaParaAutorizacion();
 
-        $recepcionista = User::factory()->create([
-            'id' => 13,
-        ]);
-        $recepcionista->assignRole('RECEPCIONISTA');
+        $recepcionista =
+            User::factory()->create([
+                'id' => 13,
+            ]);
 
-        $this->actingAs($recepcionista)
+        $recepcionista->assignRole(
+            'RECEPCIONISTA'
+        );
+
+        $this->actingAs(
+            $recepcionista
+        )
             ->patchJson(
                 '/clinica/citas/100/estado',
-                ['estado_cita_id' => 102]
+                [
+                    'estado_cita_id' =>
+                        102,
+                ]
             )
             ->assertForbidden();
 
-        $odontologo = User::factory()->create([
-            'id' => 14,
-        ]);
-        $odontologo->assignRole('ODONTOLOGO');
+        $odontologo =
+            User::factory()->create([
+                'id' => 14,
+            ]);
 
-        $this->actingAs($odontologo)
+        $odontologo->assignRole(
+            'ODONTOLOGO'
+        );
+
+        $this->actingAs(
+            $odontologo
+        )
             ->patchJson(
                 '/clinica/citas/100/estado',
-                ['estado_cita_id' => 101]
+                [
+                    'estado_cita_id' =>
+                        101,
+                ]
             )
             ->assertForbidden();
 
-        $this->actingAs($odontologo)
+        $this->actingAs(
+            $odontologo
+        )
             ->patchJson(
                 '/clinica/citas/100/estado',
-                ['estado_cita_id' => 103]
+                [
+                    'estado_cita_id' =>
+                        103,
+                ]
             )
             ->assertForbidden();
 
-        $lector = User::factory()->create([
-            'id' => 15,
-        ]);
-        $lector->givePermissionTo('citas.ver');
+        $lector =
+            User::factory()->create([
+                'id' => 15,
+            ]);
 
-        $this->actingAs($lector)
+        $lector->givePermissionTo(
+            'citas.ver'
+        );
+
+        $this->actingAs(
+            $lector
+        )
             ->patchJson(
                 '/clinica/citas/100/estado',
-                ['estado_cita_id' => 100]
+                [
+                    'estado_cita_id' =>
+                        100,
+                ]
             )
             ->assertForbidden();
     }
 
     public function test_login_y_logout_de_fortify_siguen_funcionando(): void
     {
-        $this->post('/login', [
-            'email' => 'admin@cabanillas.com',
-            'password' => 'password',
-        ])->assertRedirect('/clinica');
+        $this->post(
+            '/login',
+            [
+                'email' =>
+                    'admin@cabanillas.com',
+
+                'password' =>
+                    'password',
+            ]
+        )->assertRedirect(
+            '/clinica'
+        );
 
         $this->assertAuthenticatedAs(
             $this->administrador
@@ -246,28 +473,44 @@ class RolesPermisosTest extends TestCase
 
     public function test_administrador_recibe_roles_y_permisos_en_inertia(): void
     {
-        $this->actingAs($this->administrador)
+        $this->actingAs(
+            $this->administrador
+        )
             ->get('/clinica')
             ->assertOk()
             ->assertInertia(
-                fn (Assert $page) => $page
-                    ->where('auth.user.id', 2)
-                    ->where(
-                        'auth.roles',
-                        ['ADMINISTRADOR']
-                    )
-                    ->has('auth.permissions', 32)
+                fn (Assert $page) =>
+                    $page
+                        ->where(
+                            'auth.user.id',
+                            2
+                        )
+                        ->where(
+                            'auth.roles',
+                            [
+                                'ADMINISTRADOR',
+                            ]
+                        )
+                        ->has(
+                            'auth.permissions',
+                            33
+                        )
             );
-        foreach ([
-            '/clinica/pacientes',
-            '/clinica/citas',
-            '/clinica/pagos',
-            '/clinica/profesionales',
-            '/clinica/servicios',
-            '/clinica/consultorios',
-        ] as $ruta) {
-            $this->get($ruta)
-                ->assertOk();
+
+        foreach (
+            [
+                '/clinica/pacientes',
+                '/clinica/citas',
+                '/clinica/pagos',
+                '/clinica/profesionales',
+                '/clinica/servicios',
+                '/clinica/consultorios',
+            ]
+            as $ruta
+        ) {
+            $this->get(
+                $ruta
+            )->assertOk();
         }
     }
 
@@ -275,88 +518,134 @@ class RolesPermisosTest extends TestCase
     {
         $ahora = now();
 
-        DB::table('pacientes')->insert([
+        DB::table(
+            'pacientes'
+        )->insert([
             'id' => 100,
-            'codigo' => 'PAC-TEST-100',
-            'tipo_documento' => 'DNI',
-            'numero_documento' => 'TEST-100',
-            'nombres' => 'Paciente',
-            'apellidos' => 'Prueba',
-            'created_at' => $ahora,
-            'updated_at' => $ahora,
+            'codigo' =>
+                'PAC-TEST-100',
+            'tipo_documento' =>
+                'DNI',
+            'numero_documento' =>
+                'TEST-100',
+            'nombres' =>
+                'Paciente',
+            'apellidos' =>
+                'Prueba',
+            'created_at' =>
+                $ahora,
+            'updated_at' =>
+                $ahora,
         ]);
 
-        DB::table('profesionales')->insert([
+        DB::table(
+            'profesionales'
+        )->insert([
             'id' => 100,
-            'nombres' => 'Odontologo',
-            'apellidos' => 'Prueba',
-            'numero_documento' => 'PRO-TEST-100',
-            'numero_colegiatura' => 'COP-TEST-100',
-            'created_at' => $ahora,
-            'updated_at' => $ahora,
+            'nombres' =>
+                'Odontologo',
+            'apellidos' =>
+                'Prueba',
+            'numero_documento' =>
+                'PRO-TEST-100',
+            'numero_colegiatura' =>
+                'COP-TEST-100',
+            'created_at' =>
+                $ahora,
+            'updated_at' =>
+                $ahora,
         ]);
 
-        DB::table('estados_cita')->insert([
+        DB::table(
+            'estados_cita'
+        )->insert([
             [
                 'id' => 100,
-                'codigo' => 'PENDIENTE',
-                'nombre' => 'Pendiente',
-                'es_final' => false,
+                'codigo' =>
+                    'PENDIENTE',
+                'nombre' =>
+                    'Pendiente',
+                'es_final' =>
+                    false,
             ],
             [
                 'id' => 101,
-                'codigo' => 'CONFIRMADA',
-                'nombre' => 'Confirmada',
-                'es_final' => false,
+                'codigo' =>
+                    'CONFIRMADA',
+                'nombre' =>
+                    'Confirmada',
+                'es_final' =>
+                    false,
             ],
             [
                 'id' => 102,
-                'codigo' => 'EN_ATENCION',
-                'nombre' => 'En atención',
-                'es_final' => false,
+                'codigo' =>
+                    'EN_ATENCION',
+                'nombre' =>
+                    'En atención',
+                'es_final' =>
+                    false,
             ],
             [
                 'id' => 103,
-                'codigo' => 'NO_ASISTIO',
-                'nombre' => 'No asistió',
-                'es_final' => true,
+                'codigo' =>
+                    'NO_ASISTIO',
+                'nombre' =>
+                    'No asistió',
+                'es_final' =>
+                    true,
             ],
         ]);
 
-        DB::table('citas')->insert([
+        DB::table(
+            'citas'
+        )->insert([
             'id' => 100,
-            'paciente_id' => 100,
-            'profesional_id' => 100,
-            'consultorio_id' => null,
-            'estado_cita_id' => 100,
-            'fecha_hora_inicio' => $ahora->copy()
-                ->addDay(),
-            'fecha_hora_fin' => $ahora->copy()
-                ->addDay()
-                ->addHour(),
-            'created_at' => $ahora,
-            'updated_at' => $ahora,
+            'paciente_id' =>
+                100,
+            'profesional_id' =>
+                100,
+            'consultorio_id' =>
+                null,
+            'estado_cita_id' =>
+                100,
+            'fecha_hora_inicio' =>
+                $ahora
+                    ->copy()
+                    ->addDay(),
+            'fecha_hora_fin' =>
+                $ahora
+                    ->copy()
+                    ->addDay()
+                    ->addHour(),
+            'created_at' =>
+                $ahora,
+            'updated_at' =>
+                $ahora,
         ]);
     }
 
     /**
-     * @param  array<int, string>  $permisosEsperados
+     * @param array<int, string> $permisosEsperados
      */
     private function assertRolePermissions(
         string $rol,
         array $permisosEsperados
     ): void {
-        $permisosActuales = Role::findByName(
-            $rol,
-            'web'
-        )
-            ->permissions
-            ->pluck('name')
-            ->sort()
-            ->values()
-            ->all();
+        $permisosActuales =
+            Role::findByName(
+                $rol,
+                'web'
+            )
+                ->permissions
+                ->pluck('name')
+                ->sort()
+                ->values()
+                ->all();
 
-        sort($permisosEsperados);
+        sort(
+            $permisosEsperados
+        );
 
         $this->assertSame(
             $permisosEsperados,

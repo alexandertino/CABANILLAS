@@ -51,6 +51,7 @@ import {
     X,
     LogOut,
     Smile,
+    ClipboardList,
 } from 'lucide-vue-next';
 
 defineProps({
@@ -123,6 +124,13 @@ const administracion = [
         icono: UserCog,
         disponible: true,
         permiso: 'usuarios.ver',
+    },
+    {
+        nombre: 'Auditoría',
+        href: '/clinica/auditoria',
+        icono: ClipboardList,
+        disponible: true,
+        permiso: 'auditoria.ver',
     },
     {
         nombre: 'Configuración',

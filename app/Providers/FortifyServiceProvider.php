@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Support\Auditoria;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -37,13 +38,32 @@ class FortifyServiceProvider extends ServiceProvider
                 )
                 ->first();
 
-            return $user?->activo === true
+            $passwordValida = $user !== null
                 && Hash::check(
                     (string) $request->input('password'),
                     $user->password
-                )
-                    ? $user
-                    : null;
+                );
+
+            if (
+                $user !== null
+                && $user->activo !== true
+                && $passwordValida
+            ) {
+                Auditoria::registrar(
+                    'autenticacion',
+                    'login_bloqueado',
+                    'Intento de acceso de usuario inactivo',
+                    $user,
+                    propiedades: [
+                        'motivo' => 'usuario_inactivo',
+                    ],
+                    anonimo: true
+                );
+            }
+
+            return $user?->activo === true && $passwordValida
+                ? $user
+                : null;
         });
 
         RateLimiter::for('login', function (Request $request) {

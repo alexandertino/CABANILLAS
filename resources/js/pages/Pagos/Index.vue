@@ -291,8 +291,7 @@ function referenciaPago(
         <!-- HERO -->
 
         <section
-            class="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 p-6 text-white shadow-xl sm:p-8"
-        >
+            class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-clinica-700 via-clinica-700 to-clinica-900 px-7 py-8 text-white shadow-sm lg:px-10">
             <div
                 class="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between"
             >

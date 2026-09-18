@@ -6,6 +6,7 @@ use App\Models\Cita;
 use App\Models\Paciente;
 use App\Models\TratamientoPaciente;
 use App\Models\User;
+use App\Models\SeguimientoClinico;
 use Illuminate\Database\Eloquent\Builder;
 
 final class AlcanceClinico
@@ -153,6 +154,48 @@ final class AlcanceClinico
         );
     }
 
+    public static function seguimientos(
+        Builder $query,
+        User $usuario
+    ): Builder {
+        abort_unless(
+            self::esOdontologo($usuario),
+            403,
+            'Solo un odontólogo puede acceder al seguimiento clínico.'
+        );
+
+        $profesionalId =
+            self::profesionalId($usuario);
+
+        return $query->where(
+            'seguimientos_clinicos.profesional_id',
+            $profesionalId
+        );
+    }
+
+    public static function autorizarSeguimiento(
+        User $usuario,
+        SeguimientoClinico $seguimiento
+    ): void {
+        abort_unless(
+            self::esOdontologo($usuario),
+            403,
+            'No tienes acceso al seguimiento clínico.'
+        );
+
+        $autorizado = self::seguimientos(
+            SeguimientoClinico::query()
+                ->whereKey($seguimiento->getKey()),
+            $usuario
+        )->exists();
+
+        abort_unless(
+            $autorizado,
+            403,
+            'No tienes acceso a este seguimiento clínico.'
+        );
+    }
+    
     public static function profesionalId(
         User $usuario
     ): ?int {

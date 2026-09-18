@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Clinica;
 
+use App\Support\Auditoria;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Pagos\AnularPagoRequest;
 use App\Http\Requests\Pagos\GuardarPagoRequest;
@@ -1144,15 +1145,24 @@ public function pendientes(
                     ===
                     'TRATAMIENTO'
                 ) {
-                    $this->guardarPagoTratamiento(
+                    $pago = $this->guardarPagoTratamiento(
                         $datos
                     );
-
-                    return;
+                } else {
+                    $pago = $this->guardarPagoCitaSimple(
+                        $datos
+                    );
                 }
 
-                $this->guardarPagoCitaSimple(
-                    $datos
+                Auditoria::registrar(
+                    'pagos',
+                    'registrar',
+                    'Pago registrado',
+                    $pago,
+                    despues: Auditoria::atributos(
+                        $pago,
+                        Auditoria::PAGO
+                    )
                 );
             }
         );
@@ -1190,6 +1200,11 @@ public function pendientes(
                     ]);
                 }
 
+                $antes = Auditoria::atributos(
+                    $pago,
+                    Auditoria::PAGO
+                );
+
                 $pago->update([
                     'estado' =>
                         Pago::ESTADO_ANULADO,
@@ -1204,6 +1219,18 @@ public function pendientes(
                     'usuario_anulacion_id' =>
                         Auth::id(),
                 ]);
+
+                Auditoria::registrar(
+                    'pagos',
+                    'anular',
+                    'Pago anulado',
+                    $pago,
+                    $antes,
+                    Auditoria::atributos(
+                        $pago->refresh(),
+                        Auditoria::PAGO
+                    )
+                );
             }
         );
 

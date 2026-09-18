@@ -61,6 +61,12 @@ class RolesPermisosSeeder extends Seeder
                 'usuarios.ver',
                 'usuarios.crear',
                 'usuarios.editar',
+
+                'seguimientos.ver',
+                'seguimientos.crear',
+                'seguimientos.editar',
+
+                'auditoria.ver',
             ];
 
             foreach ($permisos as $permiso) {
@@ -86,7 +92,16 @@ class RolesPermisosSeeder extends Seeder
             );
 
             $administrador->syncPermissions(
-                $permisos
+                array_values(
+                    array_diff(
+                        $permisos,
+                        [
+                            'seguimientos.ver',
+                            'seguimientos.crear',
+                            'seguimientos.editar',
+                        ]
+                    )
+                )
             );
 
             $recepcionista->syncPermissions([
@@ -127,6 +142,10 @@ class RolesPermisosSeeder extends Seeder
                 'tratamientos.crear',
                 'tratamientos.editar',
                 'tratamientos.finalizar',
+
+                'seguimientos.ver',
+                'seguimientos.crear',
+                'seguimientos.editar',
             ]);
 
             User::query()

@@ -7,6 +7,7 @@ use App\Http\Requests\Usuarios\StoreUsuarioRequest;
 use App\Http\Requests\Usuarios\UpdateUsuarioRequest;
 use App\Models\Profesional;
 use App\Models\User;
+use App\Support\Auditoria;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -156,6 +157,20 @@ class UsuarioController extends Controller
         DB::transaction(function () use ($datos, $rol): void {
             $usuario = User::create($datos);
             $usuario->syncRoles([$rol]);
+
+            Auditoria::registrar(
+                'usuarios',
+                'crear',
+                'Usuario creado',
+                $usuario,
+                despues: array_merge(
+                    Auditoria::atributos(
+                        $usuario,
+                        Auditoria::USUARIO
+                    ),
+                    ['rol' => $rol]
+                )
+            );
         });
 
         return back()->with(
@@ -170,6 +185,9 @@ class UsuarioController extends Controller
     ): RedirectResponse {
         $datos = $request->validated();
         $rol = $datos['rol'];
+        $passwordActualizada = filled(
+            $datos['password'] ?? null
+        );
 
         unset($datos['rol']);
 
@@ -184,7 +202,8 @@ class UsuarioController extends Controller
         DB::transaction(function () use (
             $usuario,
             $datos,
-            $rol
+            $rol,
+            $passwordActualizada
         ): void {
             $this->bloquearUsuariosActivos();
 
@@ -202,8 +221,34 @@ class UsuarioController extends Controller
                 ]);
             }
 
+            $antes = array_merge(
+                Auditoria::atributos(
+                    $usuario,
+                    Auditoria::USUARIO
+                ),
+                ['rol' => $usuario->roles()->value('name')]
+            );
+
             $usuario->update($datos);
             $usuario->syncRoles([$rol]);
+
+            Auditoria::registrar(
+                'usuarios',
+                'editar',
+                'Usuario editado',
+                $usuario,
+                $antes,
+                array_merge(
+                    Auditoria::atributos(
+                        $usuario->refresh(),
+                        Auditoria::USUARIO
+                    ),
+                    ['rol' => $rol]
+                ),
+                [
+                    'credencial_actualizada' => $passwordActualizada,
+                ]
+            );
         });
 
         return back()->with(
@@ -228,9 +273,26 @@ class UsuarioController extends Controller
                 ]);
             }
 
+            $antes = Auditoria::atributos(
+                $usuario,
+                Auditoria::USUARIO
+            );
+
             $usuario->update([
                 'activo' => false,
             ]);
+
+            Auditoria::registrar(
+                'usuarios',
+                'desactivar',
+                'Usuario desactivado',
+                $usuario,
+                $antes,
+                Auditoria::atributos(
+                    $usuario->refresh(),
+                    Auditoria::USUARIO
+                )
+            );
         });
 
         return back()->with(
@@ -241,9 +303,26 @@ class UsuarioController extends Controller
 
     public function reactivar(User $usuario): RedirectResponse
     {
+        $antes = Auditoria::atributos(
+            $usuario,
+            Auditoria::USUARIO
+        );
+
         $usuario->update([
             'activo' => true,
         ]);
+
+        Auditoria::registrar(
+            'usuarios',
+            'activar',
+            'Usuario activado',
+            $usuario,
+            $antes,
+            Auditoria::atributos(
+                $usuario->refresh(),
+                Auditoria::USUARIO
+            )
+        );
 
         return back()->with(
             'success',
